@@ -28,7 +28,7 @@ struct FavoritesTab: View {
                 HStack {
                     Spacer()
                     Button {
-                        guard let folder = AppDialogs.folder(title: "添加常用目录"), !folders.contains(folder.path) else { return }
+                        guard let folder = AppDialogs.folder(title: String(localized: "添加常用目录")), !folders.contains(folder.path) else { return }
                         folders.append(folder.path); SharedConfig.shared.favoriteFolders = folders
                     } label: { Label("添加文件夹…", systemImage: "plus") }
                     .buttonStyle(.bordered)

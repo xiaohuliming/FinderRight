@@ -130,17 +130,17 @@ enum AppDialogs {
     static func message(title: String, text: String) {
         DispatchQueue.main.async {
             activate()
-            let alert = NSAlert(); alert.messageText = title; alert.informativeText = text
-            alert.addButton(withTitle: "好"); alert.runModal()
+            let alert = NSAlert(); alert.messageText = NSLocalizedString(title, comment: "Dialog title"); alert.informativeText = NSLocalizedString(text, comment: "Dialog message")
+            alert.addButton(withTitle: String(localized: "好")); alert.runModal()
         }
     }
     static func text(title: String, label: String, initial: String) -> String? {
         onMain {
             activate()
-            let alert = NSAlert(); alert.messageText = title; alert.informativeText = label
+            let alert = NSAlert(); alert.messageText = NSLocalizedString(title, comment: "Dialog title"); alert.informativeText = NSLocalizedString(label, comment: "Field label")
             let field = NSTextField(string: initial); field.frame = NSRect(x: 0, y: 0, width: 360, height: 26)
             field.setAccessibilityLabel(label)
-            alert.accessoryView = field; alert.addButton(withTitle: "创建"); alert.addButton(withTitle: "取消")
+            alert.accessoryView = field; alert.addButton(withTitle: String(localized: "创建")); alert.addButton(withTitle: String(localized: "取消"))
             alert.window.initialFirstResponder = field
             guard alert.runModal() == .alertFirstButtonReturn else { return nil }
             return field.stringValue
@@ -149,7 +149,7 @@ enum AppDialogs {
     static func folder(title: String) -> URL? {
         onMain {
             activate()
-            let panel = NSOpenPanel(); panel.title = title; panel.prompt = "选择"
+            let panel = NSOpenPanel(); panel.title = NSLocalizedString(title, comment: "Folder panel title"); panel.prompt = String(localized: "选择")
             panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
             panel.canCreateDirectories = true
             return panel.runModal() == .OK ? panel.url : nil
@@ -160,9 +160,9 @@ enum AppDialogs {
         return onMain {
             activate()
             let draft = RenameDraft(urls: urls)
-            let alert = NSAlert(); alert.messageText = "批量重命名 \(urls.count) 项"
+            let alert = NSAlert(); alert.messageText = String(localized: "批量重命名 \(urls.count) 项")
             alert.accessoryView = NSHostingView(rootView: RenamePreview(draft: draft))
-            alert.addButton(withTitle: "重命名"); alert.addButton(withTitle: "取消")
+            alert.addButton(withTitle: String(localized: "重命名")); alert.addButton(withTitle: String(localized: "取消"))
             guard alert.runModal() == .alertFirstButtonReturn else { return nil }
             return draft.names
         }

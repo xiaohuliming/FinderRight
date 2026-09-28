@@ -39,7 +39,7 @@ struct TemplatesTab: View {
                 HStack {
                     Spacer()
                     Button {
-                        editing = FileTemplate(name: "新模板", fileExtension: "txt", content: "")
+                        editing = FileTemplate(name: String(localized: "新模板"), fileExtension: "txt", content: "")
                     } label: { Label("添加模板…", systemImage: "plus") }
                     .buttonStyle(.bordered)
                 }
@@ -110,7 +110,7 @@ struct TemplateEditor: View {
                 }
             }
             HStack(alignment: .center, spacing: Theme.Spacing.s) {
-                if let error { Label(error, systemImage: "exclamationmark.triangle.fill").font(.subheadline).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true) }
+                if let error { Label(LocalizedStringKey(error), systemImage: "exclamationmark.triangle.fill").font(.subheadline).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true) }
                 Spacer(minLength: Theme.Spacing.s)
                 Button("取消") { dismiss() }.buttonStyle(.bordered).keyboardShortcut(.cancelAction)
                 Button("保存") {
