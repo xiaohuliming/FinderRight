@@ -8,6 +8,7 @@ final class FinderRightService {
 
     func handle(_ request: IPCRequest) -> IPCResponse {
         do {
+            try RequestPolicy.validate(request)
             let message = try perform(request)
             return IPCResponse(id: request.id, success: true, message: message)
         } catch {
@@ -114,6 +115,12 @@ final class FinderRightService {
                 throw FileOperationError("找不到应用，请在设置中重新选择。")
             }
             let urls = req.action == "openTerminal" ? [URL(fileURLWithPath: try required("directory"))] : paths
+            if req.action == "openTerminal" {
+                guard let directory = urls.first,
+                      (try directory.resourceValues(forKeys: [.isDirectoryKey])).isDirectory == true else {
+                    throw FileOperationError("终端只能打开文件夹。")
+                }
+            }
             DispatchQueue.main.async {
                 let configuration = NSWorkspace.OpenConfiguration()
                 NSWorkspace.shared.open(urls, withApplicationAt: applicationURL, configuration: configuration) { _, error in
@@ -142,8 +149,11 @@ final class FinderRightService {
 /// Finder and Services use the same queue so concurrent requests cannot race.
 enum ActionRunner {
     static let queue = DispatchQueue(label: "com.finderright.operations", qos: .userInitiated)
-    static func submit(_ request: IPCRequest) {
+    static func submit(_ request: IPCRequest, requiresConfirmation: Bool = false) {
         queue.async {
+            do { try RequestPolicy.validate(request) }
+            catch { AppDialogs.message(title: "操作未完成", text: error.localizedDescription); return }
+            if requiresConfirmation && !AppDialogs.confirmServiceAction(request) { return }
             let titles = ["compressZip": "正在压缩", "compressTarGz": "正在压缩", "decompress": "正在解压",
                           "imageConvert": "正在转换图片", "imageResize": "正在缩放图片", "imageCompress": "正在压缩图片",
                           "makePDF": "正在生成 PDF", "copySHA256": "正在计算 SHA-256"]

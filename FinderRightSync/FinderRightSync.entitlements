@@ -2,46 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- 沙箱开关（FinderSync 扩展必须启用） -->
-    <key>com.apple.security.app-sandbox</key>
-    <true/>
-
-    <!-- 用户选择的文件读写（右键菜单操作的目标文件） -->
-    <key>com.apple.security.files.user-selected.read-write</key>
-    <true/>
-
-    <!-- 下载目录读写 -->
-    <key>com.apple.security.files.downloads.read-write</key>
-    <true/>
-
-    <!-- 外部卷读写（/Volumes/ 下的外接硬盘等） -->
-    <key>com.apple.security.temporary-exception.files.absolute-path.read-write</key>
-    <array>
-        <string>/Volumes/</string>
-    </array>
-
-    <!-- IPC 共享目录读写（扩展和主 App 通过文件交换消息） -->
-    <key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
-    <array>
-        <string>/Library/Application Support/FinderRight/</string>
-        <!-- iCloud Drive：~/Library/Mobile Documents/ 下所有内容 -->
-        <string>/Library/Mobile Documents/</string>
-        <!-- Google Drive / OneDrive / Dropbox 等：~/Library/CloudStorage/ -->
-        <string>/Library/CloudStorage/</string>
-    </array>
-
-    <!-- 允许 fork 子进程执行命令行工具（zip/tar/unzip/defaults/killall 等） -->
-    <key>com.apple.security.temporary-exception.sbpl</key>
-    <string>(allow process-fork) (allow process-exec*)</string>
-
-    <!-- AppleScript 控制以下应用（用于打开终端、控制 Finder） -->
-    <key>com.apple.security.temporary-exception.apple-events</key>
-    <array>
-        <string>com.apple.finder</string>
-        <string>com.apple.Terminal</string>
-        <string>com.apple.systemevents</string>
-        <string>com.googlecode.iterm2</string>
-        <string>dev.warp.Warp-Stable</string>
-    </array>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
+	<array>
+		<string>/Library/Application Support/FinderRight/</string>
+	</array>
 </dict>
 </plist>

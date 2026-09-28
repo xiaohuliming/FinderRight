@@ -1,4 +1,5 @@
 import SwiftUI
+import Carbon
 
 @main
 struct FinderRightApp: App {
@@ -208,9 +209,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// 处理 finderright:// URL scheme（IPC 唤醒入口）
     func application(_ application: NSApplication, open urls: [URL]) {
-        NSLog("[AppDelegate] application(open:) urls=\(urls)")
+        let token = NSAppleEventManager.shared().currentAppleEvent?
+            .attributeDescriptor(forKeyword: keySenderAuditTokenAttr)?.data
         for url in urls {
-            IPCWatcher.shared.handle(url: url)
+            IPCWatcher.shared.handle(url: url, auditToken: token)
         }
     }
 }

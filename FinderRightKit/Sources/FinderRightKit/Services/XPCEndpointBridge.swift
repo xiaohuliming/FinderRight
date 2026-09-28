@@ -1,17 +1,8 @@
 import Foundation
 
-/// 扩展 ↔ 主 App 的文件型 IPC 桥。
-///
-/// 为什么不用 NSXPCListenerEndpoint：
-///   - `NSXPCListenerEndpoint` 实现的 `NSSecureCoding` 只能在 NSXPCCoder 上下文里使用，
-///     用 NSKeyedArchiver 序列化会抛 "This class may only be encoded by an NSXPCCoder"。
-///   - 没有 launchd plist 注册 mach service 的情况下，标准 NSXPCConnection 也连不上主 App。
-///
-/// 因此走文件 IPC：
-///   - 扩展把 request JSON 写到 `pendingDir/<uuid>.req.json`
-///   - 扩展用自定义 URL scheme `finderright://execute?id=<uuid>` 唤醒主 App
-///   - 主 App 处理后把结果写到 `pendingDir/<uuid>.resp.json`
-///   - 扩展 poll 等待 response 文件出现
+/// Finder requests use private files and an authenticated Apple Event carrying
+/// the request digest. The host verifies the sender's signed code and consumes
+/// each bounded request once. There are no network listeners or shared secrets.
 public enum IPCBridge {
 
     /// 共享根目录（在真实用户 home，绕过沙箱重定向）
@@ -47,7 +38,8 @@ public enum IPCBridge {
 
     /// 确保 pendingDir 存在
     public static func ensureDirectory() throws {
-        try FileManager.default.createDirectory(at: pendingDir, withIntermediateDirectories: true)
+        try SecureRequestStore(directory: rootDirectory).prepare()
+        try SecureRequestStore(directory: pendingDir).prepare()
     }
 }
 

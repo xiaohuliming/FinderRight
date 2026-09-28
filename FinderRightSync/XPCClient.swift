@@ -10,8 +10,8 @@ final class IPCClient {
         do {
             try IPCBridge.ensureDirectory()
             let request = IPCRequest(id: id, action: action, payload: payload)
-            try JSONEncoder().encode(request).write(to: IPCBridge.requestFile(id: id), options: .atomic)
-            guard let url = URL(string: "\(IPCBridge.urlScheme)://execute?id=\(id)") else { return }
+            let digest = try SecureRequestStore(directory: IPCBridge.pendingDir).write(request)
+            guard let url = URL(string: "\(IPCBridge.urlScheme)://execute?id=\(id)&sha256=\(digest)") else { return }
             let configuration = NSWorkspace.OpenConfiguration()
             configuration.activates = false
             NSWorkspace.shared.open(url, configuration: configuration) { _, error in

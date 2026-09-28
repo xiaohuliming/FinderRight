@@ -8,12 +8,16 @@ jobs:
   test-and-build:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Test file, archive, image and PDF operations
         run: swift test --package-path FinderRightKit
       - name: Build universal app and validate local signatures
-        run: ./scripts/build.sh
-      - uses: actions/upload-artifact@v4
+        run: FINDERRIGHT_RELEASE_BUILD=1 ./scripts/build.sh
+      - name: Audit packaged binaries and entitlements
+        run: python3 scripts/audit-package.py dist/FinderRight-1.2.0-macOS-universal.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: FinderRight-preview-universal
-          path: dist/FinderRight-1.2.0-preview-universal.zip*
+          name: FinderRight-macOS-universal
+          path: |
+            dist/FinderRight-*-macOS-universal.zip*
+            dist/BUILD-INFO.json

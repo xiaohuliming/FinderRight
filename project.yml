@@ -27,6 +27,8 @@ targets:
     platform: macOS
     sources:
       - FinderRight
+      - path: LICENSE
+        buildPhase: resources
     dependencies:
       - target: FinderRightSync
         embed: true

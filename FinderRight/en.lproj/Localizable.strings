@@ -313,3 +313,10 @@
 /* Extension installation guidance */
 "如果系统列表中没有 FinderRight，请先将应用移到“应用程序”文件夹，再从那里重新打开。" = "If FinderRight is missing from the system list, move the app to Applications and reopen it from there.";
 "macOS 26 中，请在“文件提供程序”分类查找 FinderRight。" = "On macOS 26, look for FinderRight under File Providers.";
+
+/* Service origin confirmation */
+"确认系统服务操作" = "Confirm Service Action";
+"系统服务也可以由其他程序调用，请确认以下操作由你发起。" = "System services can also be called by other apps. Confirm that you requested this action.";
+"继续" = "Continue";
+"涉及 %lld 项文件" = "%lld selected files";
+"涉及文件" = "Selected files";

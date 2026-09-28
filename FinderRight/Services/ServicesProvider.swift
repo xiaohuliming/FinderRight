@@ -29,6 +29,6 @@ final class ServicesProvider: NSObject {
             error?.pointee = "请只选择压缩文件。"; return
         }
         if action == "imageConvert" { payload["format"] = .string("png") }
-        ActionRunner.submit(IPCRequest(id: UUID().uuidString, action: action, payload: payload))
+        ActionRunner.submit(IPCRequest(id: UUID().uuidString, action: action, payload: payload), requiresConfirmation: true)
     }
 }

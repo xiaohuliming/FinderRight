@@ -123,6 +123,43 @@ enum AppDialogs {
         progressWindow = window
     }
     static func hideProgress() { progressWindow?.close(); progressWindow = nil }
+    static func confirmServiceAction(_ request: IPCRequest) -> Bool {
+        onMain {
+            let titles = ["copyPath": "复制路径", "copyNames": "复制文件名", "copyFileURLs": "复制文件链接",
+                          "copySHA256": "复制 SHA-256", "openTerminal": "打开终端", "openWithApp": "打开编辑器",
+                          "cutFiles": "剪切", "pasteFiles": "粘贴", "copyTo": "复制到", "moveTo": "移动到",
+                          "batchRename": "批量重命名", "compressZip": "压缩为 ZIP", "decompress": "安全解压",
+                          "imageConvert": "转换图片", "makePDF": "合并为 PDF"]
+            let action = NSLocalizedString(titles[request.action] ?? request.action, comment: "Service action")
+            let paths = request.payload["paths"]?.stringArrayValue ?? []
+            activate()
+            let alert = NSAlert()
+            alert.messageText = String(localized: "确认系统服务操作")
+            alert.informativeText = String(localized: "系统服务也可以由其他程序调用，请确认以下操作由你发起。")
+                + "\n\n" + action + "\n" + String(localized: "涉及 \(paths.count) 项文件")
+            let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 520, height: min(180, max(44, paths.count * 20))))
+            scroll.hasVerticalScroller = true
+            scroll.borderType = .bezelBorder
+            let text = NSTextView(frame: scroll.bounds)
+            text.isEditable = false
+            text.isSelectable = true
+            text.isVerticallyResizable = true
+            text.autoresizingMask = [.width]
+            text.textContainer?.widthTracksTextView = true
+            text.textContainer?.containerSize = NSSize(width: scroll.bounds.width, height: .greatestFiniteMagnitude)
+            text.font = .monospacedSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
+            text.string = paths.joined(separator: "\n")
+            text.setAccessibilityLabel(String(localized: "涉及文件"))
+            scroll.documentView = text
+            alert.accessoryView = scroll
+            // An unexpected request must not execute because the user was already typing Return.
+            let cancel = alert.addButton(withTitle: String(localized: "取消"))
+            cancel.keyEquivalent = "\r"
+            alert.addButton(withTitle: String(localized: "继续")).keyEquivalent = ""
+            alert.window.initialFirstResponder = cancel
+            return alert.runModal() == .alertSecondButtonReturn
+        }
+    }
     static func onMain<T>(_ action: () -> T) -> T {
         Thread.isMainThread ? action() : DispatchQueue.main.sync(execute: action)
     }

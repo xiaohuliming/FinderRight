@@ -2,7 +2,9 @@
 
 Finder 右键增强工具。基于 [funny-dog/FinderRight](https://github.com/funny-dog/FinderRight) 开发，保留 MIT 许可证及原作者署名。
 
-本项目的 1.2.0 是预览版本，新增功能界面目前以中文为主。支持 macOS 13 及以上，构建产物同时包含 Apple Silicon 与 Intel 架构。文件、图片和配置均在本机处理。
+本项目的 1.2.0 是开源发布版本，提供中文和英文设置界面。支持 macOS 13 及以上，构建产物同时包含 Apple Silicon 与 Intel 架构。文件、图片和配置均在本机处理。
+
+[下载最新版本](https://github.com/xiaohuliming/FinderRight/releases/latest) · [安全检查报告](docs/SECURITY_REVIEW.md)
 
 本仓库是独立维护的项目，默认分支为 `main`。原 fork 的 PR 和验证历史保留在 [备份仓库](https://github.com/xiaohuliming/FinderRight-fork-backup)。上游 Git 历史和发布标签仍保留，原作者署名与 MIT 许可证不变。
 
@@ -39,7 +41,8 @@ Finder 右键增强工具。基于 [funny-dog/FinderRight](https://github.com/fu
 - HEIC 编码及 RAR、7z 等解码能力取决于当前系统提供的编解码器。加密压缩包暂不支持。JPEG 压缩降低编码质量，但不保证所有输入都得到更小的文件。
 - 批量重命名保留扩展名。名称冲突会拒绝执行，不支持相互交换文件名。
 - 当前采用 ad-hoc 本地签名，尚未 Apple 公证。源码和本地签名验证通过不等于通过 Gatekeeper 分发验证。
-- 文件 IPC 仍沿用上游的本地架构，已加入 UUID、请求大小和符号链接检查，但没有基于代码签名的调用方认证。不要将主应用视为对同一用户下恶意进程的安全隔离边界。
+- 本地请求验证 Apple Event audit token、已安装扩展的代码签名及内容摘要，拒绝伪造来源和被篡改的请求。macOS Services 入口会显示操作确认，默认取消。应用仍不承诺隔离已被控制的用户账户。
+- 单次请求最多处理 1024 个路径，总请求大小不超过 1 MB。包含控制字符的路径会被拒绝。
 
 ## 安装与启用
 
@@ -62,7 +65,7 @@ swift test --package-path FinderRightKit
 ./scripts/build.sh
 ```
 
-默认在 `dist/` 生成通用架构 ZIP 与 SHA-256 文件。也可以指定输出目录：
+默认在 `dist/` 生成通用架构 ZIP、SHA-256 文件和 BUILD-INFO.json。正式发布应在提交改动后运行 `FINDERRIGHT_RELEASE_BUILD=1 ./scripts/build.sh`，只编译已提交的快照。也可以指定输出目录：
 
 ```bash
 ./scripts/build.sh /absolute/path/to/output

@@ -1,25 +1,18 @@
 import Foundation
 import FinderRightKit
 
-/// Consume local requests once and execute asynchronously; dialogs never block Finder.
 final class IPCWatcher {
     static let shared = IPCWatcher()
     private init() {}
     func start() { try? IPCBridge.ensureDirectory() }
-    func handle(url: URL) {
+    func handle(url: URL, auditToken: Data?) {
         guard url.scheme == IPCBridge.urlScheme, url.host == "execute",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let id = components.queryItems?.first(where: { $0.name == "id" })?.value,
-              UUID(uuidString: id) != nil else { return }
-        let requestURL = IPCBridge.requestFile(id: id)
+              let digest = components.queryItems?.first(where: { $0.name == "sha256" })?.value else { return }
         do {
-            let values = try requestURL.resourceValues(forKeys: [.isSymbolicLinkKey, .isRegularFileKey, .fileSizeKey])
-            guard values.isSymbolicLink != true, values.isRegularFile == true, (values.fileSize ?? 0) <= 1_048_576 else {
-                throw FileOperationError("请求文件无效。")
-            }
-            let request = try JSONDecoder().decode(IPCRequest.self, from: Data(contentsOf: requestURL))
-            guard request.id == id else { throw FileOperationError("请求标识不匹配。") }
-            try FileManager.default.removeItem(at: requestURL)
+            try IPCSourceAuthenticator.validate(auditToken)
+            let request = try SecureRequestStore(directory: IPCBridge.pendingDir).consume(id: id, digest: digest)
             ActionRunner.submit(request)
         } catch { AppDialogs.message(title: "无法执行操作", text: error.localizedDescription) }
     }
