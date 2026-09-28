@@ -1,7 +1,6 @@
 import SwiftUI
 import FinderRightKit
 
-/// 单个功能开关行。直接读写 SharedConfig，开关状态即时持久化。
 struct FeatureToggleRow: View {
     let feature: MenuFeature
     @State private var enabled = true
@@ -11,20 +10,8 @@ struct FeatureToggleRow: View {
             get: { enabled },
             set: { enabled = $0; SharedConfig.shared.setActionEnabled(feature.id, enabled: $0) }
         )) {
-            HStack(spacing: 12) {
-                Image(systemName: feature.systemImage)
-                    .font(.body)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 24, height: 24)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(LocalizedStringKey(feature.nameKey))
-                        .font(.body)
-                    Text(LocalizedStringKey(feature.descriptionKey))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
+            SettingsRowLabel(icon: feature.systemImage, tint: feature.group.tint,
+                             title: LocalizedStringKey(feature.nameKey), subtitle: LocalizedStringKey(feature.descriptionKey))
         }.onAppear { enabled = SharedConfig.shared.isActionEnabled(feature.id) }
     }
 }
