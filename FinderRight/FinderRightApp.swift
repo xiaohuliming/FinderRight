@@ -159,7 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 win.titlebarAppearsTransparent = true
                 win.titleVisibility = .hidden
                 win.isReleasedWhenClosed = false
-                win.setContentSize(NSSize(width: 600, height: 500))
+                win.setContentSize(NSSize(width: 640, height: 520))
                 win.center()
                 self.onboardingWindow = win
             }
