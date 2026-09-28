@@ -22,46 +22,101 @@ final class RenameDraft: ObservableObject {
 struct RenamePreview: View {
     @ObservedObject var draft: RenameDraft
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             Picker("命名方式", selection: $draft.mode) {
-                ForEach(RenameMode.allCases, id: \.self) { mode in Text(mode.rawValue).tag(mode) }
-            }.pickerStyle(.segmented)
-            HStack {
-                TextField(draft.mode == .affix ? "前缀" : draft.mode == .replace ? "查找" : "名称前缀", text: $draft.first)
-                if draft.mode != .sequence { TextField(draft.mode == .affix ? "后缀" : "替换为", text: $draft.second) }
-                else { Stepper("起始编号 \(draft.start)", value: $draft.start, in: 1...999999) }
-            }
-            Text("保留扩展名，按当前预览顺序执行。名称冲突时不会覆盖文件。")
-                .font(.caption).foregroundStyle(.secondary)
-            HStack { Text("原名称"); Spacer(); Text("新名称") }.font(.caption).foregroundStyle(.secondary)
-            ScrollView {
-                VStack(spacing: 8) {
-                    ForEach(Array(draft.urls.enumerated()), id: \.offset) { index, url in
-                        HStack {
-                            Text(url.lastPathComponent).lineLimit(1).help(url.path).frame(maxWidth: .infinity, alignment: .leading)
-                            Image(systemName: "arrow.right").foregroundStyle(.secondary)
-                            Text(draft.names[index]).lineLimit(1).help(draft.names[index]).frame(maxWidth: .infinity, alignment: .leading)
-                        }.font(.system(.body, design: .monospaced))
-                        Divider()
+                ForEach(RenameMode.allCases, id: \.self) { mode in Text(LocalizedStringKey(mode.rawValue)).tag(mode) }
+            }.pickerStyle(.segmented).frame(maxWidth: .infinity)
+            Grid(alignment: .leading, horizontalSpacing: Theme.Spacing.m, verticalSpacing: Theme.Spacing.s) {
+                GridRow {
+                    Text(firstLabel).font(.subheadline).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+                    TextField(firstLabel, text: $draft.first).labelsHidden().frame(maxWidth: .infinity)
+                }
+                GridRow {
+                    if draft.mode != .sequence {
+                        Text(secondLabel).font(.subheadline).foregroundStyle(.secondary)
+                        TextField(secondLabel, text: $draft.second).labelsHidden().frame(maxWidth: .infinity)
+                    } else {
+                        Text("起始编号").font(.subheadline).foregroundStyle(.secondary)
+                        Stepper("起始编号 \(draft.start)", value: $draft.start, in: 1...999999)
                     }
                 }
-            }.frame(height: 190)
-            if let validation = draft.validation { Label(validation, systemImage: "exclamationmark.triangle").foregroundStyle(.red).font(.caption) }
-        }.padding(4).frame(width: 540, height: 330)
+            }
+            previewTable.frame(maxHeight: .infinity)
+            Group {
+                if let validation = draft.validation {
+                    Label(LocalizedStringKey(validation), systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
+                } else {
+                    Text("保留扩展名，按当前预览顺序执行。名称冲突时不会覆盖文件。").foregroundStyle(.secondary)
+                }
+            }
+            .font(.subheadline).fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, minHeight: 36, maxHeight: 36, alignment: .leading)
+        }.padding(Theme.Spacing.xs).frame(width: 560, height: 360)
+    }
+    private var firstLabel: LocalizedStringKey {
+        draft.mode == .affix ? "前缀" : draft.mode == .replace ? "查找" : "名称前缀"
+    }
+    private var secondLabel: LocalizedStringKey { draft.mode == .affix ? "后缀" : "替换为" }
+    private var previewTable: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("原名称").frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "arrow.right").foregroundStyle(.tertiary).accessibilityHidden(true)
+                Text("新名称").frame(maxWidth: .infinity, alignment: .leading)
+            }.font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, Theme.Spacing.s).frame(height: 24)
+            Divider()
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(draft.urls.enumerated()), id: \.offset) { index, url in
+                        let name = draft.names[index]
+                        let unchanged = name == url.lastPathComponent
+                        HStack {
+                            Text(verbatim: url.lastPathComponent).help(url.path)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Image(systemName: "arrow.right").foregroundStyle(.tertiary).accessibilityHidden(true)
+                            Text(verbatim: name).fontWeight(unchanged ? .regular : .medium).help(name)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .font(.system(.callout, design: .monospaced))
+                        .foregroundStyle(unchanged ? Color.secondary : Color.primary)
+                        .lineLimit(1).truncationMode(.middle).padding(.horizontal, Theme.Spacing.s).frame(height: 24)
+                        .background(index.isMultiple(of: 2) ? Color.clear : Color.secondary.opacity(0.05))
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+            }
+        }
+        .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
+    }
+}
+
+struct OperationProgressView: View {
+    let title: String
+    var body: some View {
+        HStack(spacing: Theme.Spacing.m) {
+            ProgressView().controlSize(.small).accessibilityLabel("正在处理")
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text(LocalizedStringKey(title)).font(.headline)
+                Text("正在本机处理，请稍候…").font(.subheadline).foregroundStyle(.secondary)
+            }
+        }.padding(Theme.Spacing.xl).frame(width: 300)
     }
 }
 
 enum AppDialogs {
     private static var progressWindow: NSWindow?
     static func showProgress(_ title: String) {
-        let view = VStack(spacing: 14) {
-            ProgressView().controlSize(.small)
-            Text(title).font(.headline)
-            Text("正在本机处理，请稍候…").font(.caption).foregroundStyle(.secondary)
-        }.padding(28).frame(width: 280)
+        let view = OperationProgressView(title: title)
         let window = NSPanel(contentViewController: NSHostingController(rootView: view))
         window.title = "FinderRight"
-        window.styleMask = [.titled, .nonactivatingPanel]
+        window.styleMask = [.titled, .nonactivatingPanel, .fullSizeContentView]
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            window.standardWindowButton(button)?.isHidden = true
+        }
         window.level = .floating
         window.isReleasedWhenClosed = false
         window.center(); window.orderFrontRegardless()
@@ -113,3 +168,8 @@ enum AppDialogs {
         }
     }
 }
+
+#Preview("Rename Light") { RenamePreview(draft: RenameDraft(urls: [URL(fileURLWithPath: "/example/notes.md")])).preferredColorScheme(.light) }
+#Preview("Rename Dark") { RenamePreview(draft: RenameDraft(urls: [URL(fileURLWithPath: "/example/notes.md")])).preferredColorScheme(.dark) }
+#Preview("Progress Light") { OperationProgressView(title: "正在转换图片").preferredColorScheme(.light) }
+#Preview("Progress Dark") { OperationProgressView(title: "正在转换图片").preferredColorScheme(.dark) }
