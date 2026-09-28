@@ -309,3 +309,7 @@
 "按文件名顺序合并图片或 PDF" = "Merge images or PDFs in file name order";
 "名称不能为空，不能包含 /、: 或控制字符，且不能超过 255 字节。" = "Names cannot be empty, contain /, : or control characters, or exceed 255 bytes.";
 "名称不能包含控制字符。" = "Names cannot contain control characters.";
+
+/* Extension installation guidance */
+"如果系统列表中没有 FinderRight，请先将应用移到“应用程序”文件夹，再从那里重新打开。" = "If FinderRight is missing from the system list, move the app to Applications and reopen it from there.";
+"macOS 26 中，请在“文件提供程序”分类查找 FinderRight。" = "On macOS 26, look for FinderRight under File Providers.";

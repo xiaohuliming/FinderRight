@@ -122,6 +122,7 @@ struct EnableExtensionStep: View {
                 .buttonStyle(.bordered).controlSize(.large)
             StatusBadge(kind: enabled ? .success : .warning, text: enabled ? "已启用" : "未启用")
                 .accessibilityLabel(enabled ? "Finder 扩展，已启用" : "Finder 扩展，未启用")
+            ExtensionSetupHint().font(.subheadline)
             Spacer(minLength: Theme.Spacing.s)
         }
         .padding(.horizontal, 64).padding(.vertical, Theme.Spacing.m)

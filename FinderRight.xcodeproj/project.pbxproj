@@ -29,6 +29,7 @@
 		92CCF71F66868C6BAC801D62 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 746734F8223DB9C94A0D330E /* Assets.xcassets */; };
 		9895825146825C72D3986054 /* FullDiskAccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64C7B87B62BE72A560198E4E /* FullDiskAccessView.swift */; };
 		A7C9497FF2C94368E6E8862A /* XPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8B76F8A462E4C81AD54EC1 /* XPCClient.swift */; };
+		AABF030FE960577AC217FA23 /* ExtensionSetupHint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 282BC27906666C1B4080C69F /* ExtensionSetupHint.swift */; };
 		BDCF2DBC2A80AC61E97ACE26 /* AppDialogs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FEBD2B0AFDEBE3146D9A1FB /* AppDialogs.swift */; };
 		C492E48C0EAC4E3CBAE9F3FA /* XPCListenerHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821B634B8F3D9C655AA237BA /* XPCListenerHost.swift */; };
 		D2E848A060951C3506299A78 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E3E810D045D0EF52C7D1D64 /* Components.swift */; };
@@ -65,6 +66,7 @@
 /* Begin PBXFileReference section */
 		12BB40FE596DC418390953E5 /* AccessibilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityView.swift; sourceTree = "<group>"; };
 		24862F55CF5D1BAD7EF15C23 /* FinderRight.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FinderRight.entitlements; sourceTree = "<group>"; };
+		282BC27906666C1B4080C69F /* ExtensionSetupHint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionSetupHint.swift; sourceTree = "<group>"; };
 		32FA6CDDF603DF4FCDB54BA2 /* RecoveryPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryPane.swift; sourceTree = "<group>"; };
 		34544E291386B1CC859ADB10 /* FinderRightApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinderRightApp.swift; sourceTree = "<group>"; };
 		348481B0CB5C4670CD2CB6C4 /* ToolsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolsPane.swift; sourceTree = "<group>"; };
@@ -207,6 +209,7 @@
 			isa = PBXGroup;
 			children = (
 				7E3E810D045D0EF52C7D1D64 /* Components.swift */,
+				282BC27906666C1B4080C69F /* ExtensionSetupHint.swift */,
 				351E03D6F1767DE50E35E9BA /* Theme.swift */,
 			);
 			path = DesignSystem;
@@ -347,6 +350,7 @@
 				4E1466EB093F383B811A175C /* AccessibilityView.swift in Sources */,
 				BDCF2DBC2A80AC61E97ACE26 /* AppDialogs.swift in Sources */,
 				D2E848A060951C3506299A78 /* Components.swift in Sources */,
+				AABF030FE960577AC217FA23 /* ExtensionSetupHint.swift in Sources */,
 				63A91F428D02766B288D3C7C /* FavoritesPane.swift in Sources */,
 				1261239C83FCB9E220E19F28 /* FeatureToggleRow.swift in Sources */,
 				80F82831D00976393409CBCB /* FinderRightApp.swift in Sources */,

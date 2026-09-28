@@ -26,7 +26,12 @@ struct GeneralTab: View {
                                      subtitle: "在本地目录的右键菜单中显示增强功能")
                 }
             } header: { Text("Finder 扩展") }
-            footer: { Text("云盘目录请使用右键「服务」入口。") }
+            footer: {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("云盘目录请使用右键「服务」入口。")
+                    ExtensionSetupHint()
+                }
+            }
 
             Section {
                 Toggle(isOn: Binding(get: { launchAtLogin }, set: { enabled in
