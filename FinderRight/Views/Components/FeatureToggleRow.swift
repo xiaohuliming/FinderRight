@@ -4,11 +4,12 @@ import FinderRightKit
 /// 单个功能开关行。直接读写 SharedConfig，开关状态即时持久化。
 struct FeatureToggleRow: View {
     let feature: MenuFeature
+    @State private var enabled = true
 
     var body: some View {
         Toggle(isOn: Binding(
-            get: { SharedConfig.shared.isActionEnabled(feature.id) },
-            set: { SharedConfig.shared.setActionEnabled(feature.id, enabled: $0) }
+            get: { enabled },
+            set: { enabled = $0; SharedConfig.shared.setActionEnabled(feature.id, enabled: $0) }
         )) {
             HStack(spacing: 12) {
                 Image(systemName: feature.systemImage)
@@ -24,6 +25,6 @@ struct FeatureToggleRow: View {
                         .foregroundColor(.secondary)
                 }
             }
-        }
+        }.onAppear { enabled = SharedConfig.shared.isActionEnabled(feature.id) }
     }
 }

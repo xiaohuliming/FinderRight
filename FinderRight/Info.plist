@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.3</string>
+	<string>1.2.0</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -28,7 +28,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>6</string>
+	<string>7</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSServices</key>
@@ -40,7 +40,75 @@
 				<string>FinderRight：复制路径</string>
 			</dict>
 			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
 			<string>copyPath</string>
+			<key>NSPortName</key>
+			<string>FinderRight</string>
+			<key>NSRequiredContext</key>
+			<dict>
+				<key>NSTextContent</key>
+				<string>FilePath</string>
+			</dict>
+			<key>NSSendTypes</key>
+			<array>
+				<string>NSFilenamesPboardType</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>FinderRight：复制文件名</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
+			<string>copyNames</string>
+			<key>NSPortName</key>
+			<string>FinderRight</string>
+			<key>NSRequiredContext</key>
+			<dict>
+				<key>NSTextContent</key>
+				<string>FilePath</string>
+			</dict>
+			<key>NSSendTypes</key>
+			<array>
+				<string>NSFilenamesPboardType</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>FinderRight：复制文件链接</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
+			<string>copyFileURLs</string>
+			<key>NSPortName</key>
+			<string>FinderRight</string>
+			<key>NSRequiredContext</key>
+			<dict>
+				<key>NSTextContent</key>
+				<string>FilePath</string>
+			</dict>
+			<key>NSSendTypes</key>
+			<array>
+				<string>NSFilenamesPboardType</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>FinderRight：复制 SHA-256</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
+			<string>copySHA256</string>
 			<key>NSPortName</key>
 			<string>FinderRight</string>
 			<key>NSRequiredContext</key>
@@ -60,6 +128,8 @@
 				<string>FinderRight：打开终端</string>
 			</dict>
 			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
 			<string>openTerminal</string>
 			<key>NSPortName</key>
 			<string>FinderRight</string>
@@ -80,7 +150,9 @@
 				<string>FinderRight：打开编辑器</string>
 			</dict>
 			<key>NSMessage</key>
-			<string>openEditor</string>
+			<string>performAction</string>
+			<key>NSUserData</key>
+			<string>openWithApp</string>
 			<key>NSPortName</key>
 			<string>FinderRight</string>
 			<key>NSRequiredContext</key>
@@ -100,7 +172,97 @@
 				<string>FinderRight：剪切</string>
 			</dict>
 			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
 			<string>cutFiles</string>
+			<key>NSPortName</key>
+			<string>FinderRight</string>
+			<key>NSRequiredContext</key>
+			<dict>
+				<key>NSTextContent</key>
+				<string>FilePath</string>
+			</dict>
+			<key>NSSendTypes</key>
+			<array>
+				<string>NSFilenamesPboardType</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>FinderRight：粘贴到…</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
+			<string>pasteFiles</string>
+			<key>NSPortName</key>
+			<string>FinderRight</string>
+			<key>NSRequiredContext</key>
+			<dict>
+				<key>NSTextContent</key>
+				<string>FilePath</string>
+			</dict>
+			<key>NSSendTypes</key>
+			<array>
+				<string>NSFilenamesPboardType</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>FinderRight：复制到…</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
+			<string>copyTo</string>
+			<key>NSPortName</key>
+			<string>FinderRight</string>
+			<key>NSRequiredContext</key>
+			<dict>
+				<key>NSTextContent</key>
+				<string>FilePath</string>
+			</dict>
+			<key>NSSendTypes</key>
+			<array>
+				<string>NSFilenamesPboardType</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>FinderRight：移动到…</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
+			<string>moveTo</string>
+			<key>NSPortName</key>
+			<string>FinderRight</string>
+			<key>NSRequiredContext</key>
+			<dict>
+				<key>NSTextContent</key>
+				<string>FilePath</string>
+			</dict>
+			<key>NSSendTypes</key>
+			<array>
+				<string>NSFilenamesPboardType</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>FinderRight：批量重命名…</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
+			<string>batchRename</string>
 			<key>NSPortName</key>
 			<string>FinderRight</string>
 			<key>NSRequiredContext</key>
@@ -120,6 +282,8 @@
 				<string>FinderRight：压缩为 ZIP</string>
 			</dict>
 			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
 			<string>compressZip</string>
 			<key>NSPortName</key>
 			<string>FinderRight</string>
@@ -137,10 +301,56 @@
 			<key>NSMenuItem</key>
 			<dict>
 				<key>default</key>
-				<string>FinderRight：解压到当前目录</string>
+				<string>FinderRight：安全解压</string>
 			</dict>
 			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
 			<string>decompress</string>
+			<key>NSPortName</key>
+			<string>FinderRight</string>
+			<key>NSRequiredContext</key>
+			<dict>
+				<key>NSTextContent</key>
+				<string>FilePath</string>
+			</dict>
+			<key>NSSendTypes</key>
+			<array>
+				<string>NSFilenamesPboardType</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>FinderRight：转换为 PNG 副本</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
+			<string>imageConvert</string>
+			<key>NSPortName</key>
+			<string>FinderRight</string>
+			<key>NSRequiredContext</key>
+			<dict>
+				<key>NSTextContent</key>
+				<string>FilePath</string>
+			</dict>
+			<key>NSSendTypes</key>
+			<array>
+				<string>NSFilenamesPboardType</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>FinderRight：合并为 PDF</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>performAction</string>
+			<key>NSUserData</key>
+			<string>makePDF</string>
 			<key>NSPortName</key>
 			<string>FinderRight</string>
 			<key>NSRequiredContext</key>

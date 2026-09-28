@@ -22,9 +22,11 @@
 		92CCF71F66868C6BAC801D62 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 746734F8223DB9C94A0D330E /* Assets.xcassets */; };
 		9895825146825C72D3986054 /* FullDiskAccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64C7B87B62BE72A560198E4E /* FullDiskAccessView.swift */; };
 		A7C9497FF2C94368E6E8862A /* XPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8B76F8A462E4C81AD54EC1 /* XPCClient.swift */; };
+		BDCF2DBC2A80AC61E97ACE26 /* AppDialogs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FEBD2B0AFDEBE3146D9A1FB /* AppDialogs.swift */; };
 		C492E48C0EAC4E3CBAE9F3FA /* XPCListenerHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821B634B8F3D9C655AA237BA /* XPCListenerHost.swift */; };
 		F8D7AD999BEE984BCABB9621 /* FinderSync.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B4A18F714BACF0360E55F6B /* FinderSync.framework */; };
 		FCD0BAE49FFA5142E0878AC1 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 64863E5FB61838EC00E245C2 /* Localizable.strings */; };
+		FFC4B4423F0DF2547A3113A9 /* AssistantSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666B09625D6FA72A664392A3 /* AssistantSettings.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,10 +59,12 @@
 		34544E291386B1CC859ADB10 /* FinderRightApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinderRightApp.swift; sourceTree = "<group>"; };
 		38B5FAD57D085D6D23C277F0 /* FinderRightSync.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FinderRightSync.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A8B76F8A462E4C81AD54EC1 /* XPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPCClient.swift; sourceTree = "<group>"; };
+		3FEBD2B0AFDEBE3146D9A1FB /* AppDialogs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDialogs.swift; sourceTree = "<group>"; };
 		4839D1478C003FF4A88EACA4 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		5E2ACE88CF8425D287BFD98E /* FinderRightService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinderRightService.swift; sourceTree = "<group>"; };
 		64863E5FB61838EC00E245C2 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		64C7B87B62BE72A560198E4E /* FullDiskAccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullDiskAccessView.swift; sourceTree = "<group>"; };
+		666B09625D6FA72A664392A3 /* AssistantSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantSettings.swift; sourceTree = "<group>"; };
 		67B7BE2E2B07467F69638A79 /* FeatureToggleRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureToggleRow.swift; sourceTree = "<group>"; };
 		67F9BED5E9A2F03515A082E2 /* FinderRight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FinderRight.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6FFD2A85D6F37455A184C011 /* FinderRightSync.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FinderRightSync.entitlements; sourceTree = "<group>"; };
@@ -145,6 +149,8 @@
 			children = (
 				9304FFC555F7390829DD77C4 /* Components */,
 				12BB40FE596DC418390953E5 /* AccessibilityView.swift */,
+				3FEBD2B0AFDEBE3146D9A1FB /* AppDialogs.swift */,
+				666B09625D6FA72A664392A3 /* AssistantSettings.swift */,
 				64C7B87B62BE72A560198E4E /* FullDiskAccessView.swift */,
 				4839D1478C003FF4A88EACA4 /* OnboardingView.swift */,
 				840F1B44B9D41300F8164D49 /* SettingsView.swift */,
@@ -295,6 +301,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				4E1466EB093F383B811A175C /* AccessibilityView.swift in Sources */,
+				BDCF2DBC2A80AC61E97ACE26 /* AppDialogs.swift in Sources */,
+				FFC4B4423F0DF2547A3113A9 /* AssistantSettings.swift in Sources */,
 				1261239C83FCB9E220E19F28 /* FeatureToggleRow.swift in Sources */,
 				80F82831D00976393409CBCB /* FinderRightApp.swift in Sources */,
 				7860690B8DD6BF4B486C2E53 /* FinderRightService.swift in Sources */,

@@ -1,0 +1,19 @@
+name: macOS checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test-and-build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test file, archive, image and PDF operations
+        run: swift test --package-path FinderRightKit
+      - name: Build universal app and validate local signatures
+        run: ./scripts/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FinderRight-preview-universal
+          path: dist/FinderRight-1.2.0-preview-universal.zip*

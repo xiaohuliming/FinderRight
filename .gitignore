@@ -18,3 +18,6 @@ Package.resolved
 .DS_Store
 *.swp
 *~
+
+# Packaged application output
+dist/

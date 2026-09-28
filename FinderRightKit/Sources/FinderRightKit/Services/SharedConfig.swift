@@ -196,6 +196,16 @@ public final class SharedConfig {
         shortcuts = current
     }
 
+    public var groupedMenus: Bool {
+        get { store["groupedMenus"] as? Bool ?? true }
+        set { store["groupedMenus"] = newValue; save() }
+    }
+
+    public var favoriteFolders: [String] {
+        get { store["favoriteFolders"] as? [String] ?? [] }
+        set { store["favoriteFolders"] = newValue; save() }
+    }
+
     // MARK: - Reset
 
     /// 重置所有配置为默认值

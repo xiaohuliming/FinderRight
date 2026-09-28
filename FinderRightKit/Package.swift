@@ -18,5 +18,6 @@ let package = Package(
             name: "FinderRightKit",
             path: "Sources/FinderRightKit"
         ),
+        .testTarget(name: "FinderRightKitTests", dependencies: ["FinderRightKit"]),
     ]
 )

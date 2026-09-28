@@ -17,7 +17,7 @@ struct AccessibilityView: View {
                 VStack(alignment: .leading) {
                     Text("辅助功能")
                         .font(.headline)
-                    Text(LocalizedStringKey(hasAccess ? "已授权" : "未授权 — 「切换隐藏文件」会让 Finder 窗口短暂闪烁"))
+                    Text(LocalizedStringKey(hasAccess ? "已授权" : "未授权，可在 Finder 中手动按 ⌘⇧."))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -25,7 +25,7 @@ struct AccessibilityView: View {
             }
 
             if !hasAccess {
-                Text("FinderRight 用「辅助功能」权限模拟 Cmd+Shift+. 快捷键，实现 Finder 隐藏文件即时切换（无需重启 Finder）。授权后 Finder 窗口不再闪烁。")
+                Text("仅右键菜单的“切换隐藏文件”需要此权限。未授权时不会重启 Finder，其他功能不受影响。")
                     .font(.callout)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

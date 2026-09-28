@@ -1,6 +1,8 @@
 import SwiftUI
 import AppKit
 import FinderRightKit
+import ServiceManagement
+import FinderSync
 
 // MARK: - 终端 & 编辑器定义
 
@@ -13,6 +15,7 @@ struct TerminalApp: Identifiable, Hashable {
     static let knownTerminals: [TerminalApp] = [
         TerminalApp(id: "terminal", name: "终端", bundleIdentifier: "com.apple.Terminal", icon: "terminal"),
         TerminalApp(id: "iterm", name: "iTerm2", bundleIdentifier: "com.googlecode.iterm2", icon: "terminal.fill"),
+        TerminalApp(id: "ghostty", name: "Ghostty", bundleIdentifier: "com.mitchellh.ghostty", icon: "terminal"),
         TerminalApp(id: "warp", name: "Warp", bundleIdentifier: "dev.warp.Warp-Stable", icon: "terminal.fill"),
         TerminalApp(id: "alacritty", name: "Alacritty", bundleIdentifier: "org.alacritty", icon: "terminal.fill"),
         TerminalApp(id: "kitty", name: "Kitty", bundleIdentifier: "net.kovidgoyal.kitty", icon: "terminal.fill"),
@@ -22,71 +25,74 @@ struct TerminalApp: Identifiable, Hashable {
 // MARK: - SettingsView
 
 struct SettingsView: View {
-    private enum SettingsTab: String, CaseIterable {
-        case general = "通用"
-        case features = "功能"
-        case shortcuts = "快捷键"
-        case tools = "终端"
-        case about = "关于"
-
+    private enum Tab: String, CaseIterable, Identifiable {
+        case general = "通用", features = "右键菜单", templates = "文件模板", favorites = "常用目录", tools = "终端与编辑器", shortcuts = "快捷键", recovery = "剪切与恢复", about = "关于"
+        var id: String { rawValue }
         var icon: String {
             switch self {
             case .general: return "gearshape"
-            case .features: return "slider.horizontal.3"
-            case .shortcuts: return "keyboard"
+            case .features: return "cursorarrow.click.2"
+            case .templates: return "doc.badge.plus"
+            case .favorites: return "star"
             case .tools: return "terminal"
+            case .shortcuts: return "keyboard"
+            case .recovery: return "arrow.uturn.backward"
             case .about: return "info.circle"
             }
         }
     }
-
+    @State private var selection: Tab = .general
     var body: some View {
-        TabView {
-            GeneralTab()
-                .tabItem {
-                    Label(LocalizedStringKey(SettingsTab.general.rawValue), systemImage: SettingsTab.general.icon)
-                }
-                .tag(SettingsTab.general)
-
-            FeaturesTab()
-                .tabItem {
-                    Label(LocalizedStringKey(SettingsTab.features.rawValue), systemImage: SettingsTab.features.icon)
-                }
-                .tag(SettingsTab.features)
-
-            ShortcutsTab()
-                .tabItem {
-                    Label(LocalizedStringKey(SettingsTab.shortcuts.rawValue), systemImage: SettingsTab.shortcuts.icon)
-                }
-                .tag(SettingsTab.shortcuts)
-
-            ToolsTab()
-                .tabItem {
-                    Label(LocalizedStringKey(SettingsTab.tools.rawValue), systemImage: SettingsTab.tools.icon)
-                }
-                .tag(SettingsTab.tools)
-
-            AboutTab()
-                .tabItem {
-                    Label(LocalizedStringKey(SettingsTab.about.rawValue), systemImage: SettingsTab.about.icon)
-                }
-                .tag(SettingsTab.about)
-        }
-        .frame(width: 540, height: 460)
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 20) {
+                Label("FinderRight", systemImage: "cursorarrow.click.2")
+                    .font(.headline).padding(.horizontal, 14).padding(.top, 22)
+                List(Tab.allCases, selection: $selection) { tab in
+                    Label(tab.rawValue, systemImage: tab.icon).tag(tab).padding(.vertical, 5)
+                }.listStyle(.sidebar)
+                Text("Finder 右键增强").font(.caption).foregroundStyle(.secondary).padding(14)
+            }.frame(width: 185).background(Color(NSColor.windowBackgroundColor))
+            Divider()
+            VStack(alignment: .leading, spacing: 0) {
+                Text(selection.rawValue).font(.title2.weight(.semibold)).padding(24)
+                Divider()
+                Group {
+                    switch selection {
+                    case .general: GeneralTab()
+                    case .features: FeaturesTab()
+                    case .templates: TemplatesTab()
+                    case .favorites: FavoritesTab()
+                    case .tools: ToolsTab()
+                    case .shortcuts: ShortcutsTab()
+                    case .recovery: RecoveryTab()
+                    case .about: AboutTab()
+                    }
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }.frame(width: 800, height: 600)
     }
 }
 
 // MARK: - 通用 Tab
 
 struct GeneralTab: View {
-    @AppStorage("launchAtLogin") private var launchAtLogin = false
+    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var loginError: String?
     @AppStorage("showMenuBarIcon") private var showMenuBarIcon = true
     @AppStorage("showDockIcon") private var showDockIcon = false
 
     var body: some View {
         Form {
             Section {
-                Toggle(isOn: $launchAtLogin) {
+                Toggle(isOn: Binding(get: { launchAtLogin }, set: { enabled in
+                    do {
+                        if enabled { try SMAppService.mainApp.register() }
+                        else { try SMAppService.mainApp.unregister() }
+                        launchAtLogin = SMAppService.mainApp.status == .enabled
+                        if SMAppService.mainApp.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
+                        loginError = nil
+                    } catch { loginError = error.localizedDescription }
+                })) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("开机自动启动")
                         Text("登录时自动运行 FinderRight")
@@ -94,6 +100,7 @@ struct GeneralTab: View {
                             .foregroundColor(.secondary)
                     }
                 }
+                if let loginError { Text(loginError).font(.caption).foregroundStyle(.red) }
             } header: {
                 Text("启动")
             }
@@ -111,7 +118,7 @@ struct GeneralTab: View {
                 Toggle(isOn: $showDockIcon) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("显示程序坞图标")
-                        Text("关闭后，FinderRight 在 Dock 中隐藏（仍可后台运行）")
+                        Text("关闭后隐藏 Dock 图标，仍可后台运行")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -141,6 +148,11 @@ struct GeneralTab: View {
                 }
             }
 
+            Section("Finder 扩展") {
+                Button("管理 Finder 扩展…") { FIFinderSyncController.showExtensionManagementInterface() }
+                Text("开启 FinderRightSync 后，本地目录会显示增强菜单。云盘目录请使用右键的“服务”入口。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section {
                 FullDiskAccessView()
                     .padding(.vertical, 4)
@@ -150,7 +162,7 @@ struct GeneralTab: View {
             } header: {
                 Text("权限")
             } footer: {
-                Text("「完全磁盘访问」让你能在 ~/Documents、~/Desktop、~/Pictures 等受保护目录使用所有功能。「辅助功能」让「切换隐藏文件」时 Finder 窗口不闪烁。")
+                Text("按需授权即可；图片、文件和配置均在本机处理。")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -163,22 +175,23 @@ struct GeneralTab: View {
 // MARK: - 功能 Tab
 
 struct FeaturesTab: View {
+    @State private var grouped = SharedConfig.shared.groupedMenus
     var body: some View {
         Form {
             Section {
-                ForEach(MenuFeatureCatalog.all) { feature in
-                    FeatureToggleRow(feature: feature)
-                }
-            } header: {
-                Text("右键菜单功能")
+                Toggle("按用途分组显示菜单", isOn: $grouped)
+                    .onChange(of: grouped) { SharedConfig.shared.groupedMenus = $0 }
             } footer: {
-                Text("关闭的功能不会出现在 Finder 右键菜单中。")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text("关闭后直接显示所有已开启的菜单项。系统“服务”入口可在系统设置的键盘快捷键中管理。")
             }
-        }
-        .formStyle(.grouped)
-        .padding()
+            ForEach(MenuGroup.allCases, id: \.self) { group in
+                Section(group.rawValue) {
+                    ForEach(MenuFeatureCatalog.all.filter { $0.group == group }) { feature in
+                        FeatureToggleRow(feature: feature)
+                    }
+                }
+            }
+        }.formStyle(.grouped).padding()
     }
 }
 
@@ -187,6 +200,7 @@ struct FeaturesTab: View {
 struct ToolsTab: View {
     @State private var availableTerminals: [TerminalApp] = []
     @State private var selectedTerminalBundleId: String = "com.apple.Terminal"
+    @State private var selectedEditor = SharedConfig.shared.preferredEditor
 
     var body: some View {
         Form {
@@ -206,9 +220,16 @@ struct ToolsTab: View {
             } header: {
                 Text("终端")
             } footer: {
-                Text("选择右键菜单中「在终端中打开」使用的终端应用")
+                Text("选择右键菜单中「打开终端」使用的应用。")
                     .font(.caption)
                     .foregroundColor(.secondary)
+            }
+            Section("系统服务的默认编辑器") {
+                Picker("默认编辑器", selection: $selectedEditor) {
+                    ForEach(EditorCatalog.all.filter { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0.id) != nil }) { editor in
+                        Text(editor.name).tag(editor.id)
+                    }
+                }.onChange(of: selectedEditor) { SharedConfig.shared.preferredEditor = $0 }
             }
         }
         .formStyle(.grouped)
@@ -278,7 +299,7 @@ struct AboutTab: View {
                 .padding(.horizontal, 40)
 
             // GitHub 链接
-            Link(destination: URL(string: "https://github.com/funny-dog/FinderRight")!) {
+            Link(destination: URL(string: "https://github.com/xiaohuliming/FinderRight")!) {
                 HStack(spacing: 6) {
                     Image(systemName: "link")
                     Text("GitHub 仓库")
@@ -291,7 +312,7 @@ struct AboutTab: View {
             Spacer()
 
             // 版权信息
-            Text("Copyright © 2026 FinderRight. All rights reserved.")
+            Text("基于 funny-dog/FinderRight · MIT License")
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .padding(.bottom, 16)
@@ -310,7 +331,12 @@ struct ShortcutsTab: View {
         ("shortcut.cut",          "剪切",           "scissors"),
         ("shortcut.paste",        "粘贴",           "doc.on.clipboard"),
         ("shortcut.compress",     "压缩为 ZIP",     "archivebox"),
-        ("shortcut.decompress",   "解压到当前目录", "archivebox.circle"),
+        ("shortcut.decompress",   "安全解压", "archivebox.circle"),
+        ("shortcut.copyNames", "复制文件名", "textformat"),
+        ("shortcut.copyFileURLs", "复制文件链接", "link"),
+        ("shortcut.copySHA256", "复制 SHA-256", "number"),
+        ("shortcut.batchRename", "批量重命名", "pencil"),
+        ("shortcut.duplicate", "创建副本", "plus.square.on.square"),
         ("shortcut.toggleHidden", "切换隐藏文件",   "eye"),
     ]
 
@@ -390,6 +416,7 @@ struct ShortcutCell: View {
             .opacity(shortcut != nil && !isRecording ? 1 : 0)
         }
         .onAppear { shortcut = SharedConfig.shared.shortcut(forActionId: actionId) }
+        .onDisappear { cancelRecording() }
     }
 
     private func startRecording() {

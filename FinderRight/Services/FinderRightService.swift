@@ -1,491 +1,158 @@
 import Foundation
 import AppKit
-import CoreGraphics
 import FinderRightKit
 
-/// 主 App 端的 IPC 请求处理器。
-///
-/// 这个对象由 IPCWatcher 创建，收到 IPCRequest 后路由到对应方法。
-/// 所有方法都在主 App 进程（非沙箱）里执行，借用主 App 的 TCC 权限（包括 Full Disk Access）。
+/// The host performs file operations on the shared background operation queue.
 final class FinderRightService {
+    private let files = FileOperations(stateDirectory: IPCBridge.rootDirectory)
 
-    /// 路由 IPCRequest 到具体的 handler
-    func handle(_ req: IPCRequest) -> IPCResponse {
+    func handle(_ request: IPCRequest) -> IPCResponse {
+        do {
+            let message = try perform(request)
+            return IPCResponse(id: request.id, success: true, message: message)
+        } catch {
+            return IPCResponse(id: request.id, success: false, message: error.localizedDescription)
+        }
+    }
+
+    private func perform(_ req: IPCRequest) throws -> String? {
+        let payload = req.payload
+        let paths = (payload["paths"]?.stringArrayValue ?? payload["items"]?.stringArrayValue ?? []).map { URL(fileURLWithPath: $0) }
+        func required(_ key: String) throws -> String {
+            guard let value = payload[key]?.stringValue, !value.isEmpty else { throw FileOperationError("缺少参数：\(key)") }
+            return value
+        }
+        func reveal(_ urls: [URL]) {
+            guard !urls.isEmpty else { return }
+            DispatchQueue.main.async { NSWorkspace.shared.activateFileViewerSelecting(urls) }
+        }
         switch req.action {
-        case "ping":
-            return ping(req)
+        case "ping": return "ready"
         case "createFile":
-            return createFile(req)
-        case "duplicate":
-            return duplicate(req)
-        case "makeSymlink":
-            return makeSymlink(req)
-        case "moveToTrash":
-            return moveToTrash(req)
-        case "revealInFinder":
-            return revealInFinder(req)
-        case "showInfo":
-            return showInfo(req)
-        case "compressZip":
-            return compressZip(req)
-        case "compressTarGz":
-            return compressTarGz(req)
-        case "decompress":
-            return decompress(req)
-        case "openTerminal":
-            return openTerminal(req)
-        case "openWithApp":
-            return openWithApp(req)
-        case "toggleHiddenFiles":
-            return toggleHiddenFiles(req)
-        case "cutFiles":
-            return cutFiles(req)
+            let directory = URL(fileURLWithPath: try required("directory"))
+            let ext = payload["ext"]?.stringValue ?? "txt"
+            let initial = "untitled" + (ext.isEmpty ? "" : "." + ext)
+            guard let name = AppDialogs.text(title: "新建文件", label: "文件名", initial: initial) else { return nil }
+            let output = try files.createFile(named: name, content: payload["content"]?.stringValue ?? "", in: directory)
+            reveal([output])
+        case "createFolder":
+            let directory = URL(fileURLWithPath: try required("directory"))
+            guard let name = AppDialogs.text(title: "新建文件夹", label: "文件夹名称", initial: "新建文件夹") else { return nil }
+            try FileOperations.validateName(name)
+            let output = FileOperations.uniqueURL(named: name, in: directory)
+            try FileManager.default.createDirectory(at: output, withIntermediateDirectories: false)
+            reveal([output])
+        case "cutFiles": try files.cut(paths)
+        case "cancelCut": try files.cancelCut()
         case "pasteFiles":
-            return pasteFiles(req)
-        default:
-            return IPCResponse(id: req.id, success: false, message: "未知 action: \(req.action)")
-        }
-    }
-
-    // MARK: - 各 handler
-
-    private func ping(_ req: IPCRequest) -> IPCResponse {
-        let testPath = req.payload["testPath"]?.stringValue ?? "~/Pictures"
-        let expanded = (testPath as NSString).expandingTildeInPath
-        let canRead = (try? FileManager.default.contentsOfDirectory(atPath: expanded)) != nil
-        return IPCResponse(id: req.id, success: true, message: canRead ? "fda=yes" : "fda=no")
-    }
-
-    private func createFile(_ req: IPCRequest) -> IPCResponse {
-        guard let directory = req.payload["directory"]?.stringValue,
-              let baseName = req.payload["baseName"]?.stringValue,
-              let ext = req.payload["ext"]?.stringValue,
-              let content = req.payload["content"]?.stringValue else {
-            return IPCResponse(id: req.id, success: false, message: "createFile 参数缺失")
-        }
-        let dirURL = URL(fileURLWithPath: directory)
-        let fileURL = uniqueFileURL(baseName: baseName, ext: ext, in: dirURL)
-        do {
-            try content.write(to: fileURL, atomically: true, encoding: .utf8)
-            NSWorkspace.shared.activateFileViewerSelecting([fileURL])
-            return IPCResponse(id: req.id, success: true, message: fileURL.path)
-        } catch {
-            return IPCResponse(id: req.id, success: false, message: error.localizedDescription)
-        }
-    }
-
-    private func duplicate(_ req: IPCRequest) -> IPCResponse {
-        guard let path = req.payload["path"]?.stringValue else {
-            return IPCResponse(id: req.id, success: false, message: "duplicate 参数缺失")
-        }
-        let url = URL(fileURLWithPath: path)
-        let dir = url.deletingLastPathComponent()
-        let base = url.deletingPathExtension().lastPathComponent
-        let ext = url.pathExtension
-        let dest = uniqueFileURL(baseName: "\(base) copy", ext: ext, in: dir)
-        do {
-            try FileManager.default.copyItem(at: url, to: dest)
-            return IPCResponse(id: req.id, success: true, message: dest.path)
-        } catch {
-            return IPCResponse(id: req.id, success: false, message: error.localizedDescription)
-        }
-    }
-
-    private func makeSymlink(_ req: IPCRequest) -> IPCResponse {
-        guard let path = req.payload["path"]?.stringValue else {
-            return IPCResponse(id: req.id, success: false, message: "makeSymlink 参数缺失")
-        }
-        let url = URL(fileURLWithPath: path)
-        let dir = url.deletingLastPathComponent()
-        let base = url.deletingPathExtension().lastPathComponent
-        let ext = url.pathExtension
-        let linkName = ext.isEmpty ? "\(base) symlink" : "\(base) symlink.\(ext)"
-        let linkURL = dir.appendingPathComponent(linkName)
-        do {
-            try FileManager.default.createSymbolicLink(at: linkURL, withDestinationURL: url)
-            return IPCResponse(id: req.id, success: true, message: linkURL.path)
-        } catch {
-            return IPCResponse(id: req.id, success: false, message: error.localizedDescription)
-        }
-    }
-
-    private func moveToTrash(_ req: IPCRequest) -> IPCResponse {
-        guard let paths = req.payload["paths"]?.stringArrayValue else {
-            return IPCResponse(id: req.id, success: false, message: "moveToTrash 参数缺失")
-        }
-        var firstError: String?
-        for p in paths {
-            do {
-                try FileManager.default.trashItem(at: URL(fileURLWithPath: p), resultingItemURL: nil)
-            } catch {
-                if firstError == nil { firstError = error.localizedDescription }
+            let destination: URL
+            if let path = payload["destination"]?.stringValue { destination = URL(fileURLWithPath: path) }
+            else if let chosen = AppDialogs.folder(title: "将剪切文件粘贴到…") { destination = chosen }
+            else { return nil }
+            let result = try files.paste(into: destination)
+            reveal(result.completed)
+            if !result.succeeded { throw FileOperationError(result.summary) }
+        case "copyTo", "moveTo":
+            let directory: URL
+            if let path = payload["destination"]?.stringValue { directory = URL(fileURLWithPath: path) }
+            else if let chosen = AppDialogs.folder(title: req.action == "copyTo" ? "复制到…" : "移动到…") { directory = chosen }
+            else { return nil }
+            let result = files.transfer(paths, into: directory, move: req.action == "moveTo")
+            reveal(result.completed)
+            if !result.succeeded { throw FileOperationError(result.summary) }
+        case "duplicate":
+            for source in paths {
+                let result = files.transfer([source], into: source.deletingLastPathComponent(), move: false)
+                if !result.succeeded { throw FileOperationError(result.summary) }
+                reveal(result.completed)
             }
-        }
-        return IPCResponse(id: req.id, success: firstError == nil, message: firstError)
-    }
-
-    private func revealInFinder(_ req: IPCRequest) -> IPCResponse {
-        guard let paths = req.payload["paths"]?.stringArrayValue else {
-            return IPCResponse(id: req.id, success: false, message: "revealInFinder 参数缺失")
-        }
-        let urls = paths.map { URL(fileURLWithPath: $0) }
-        NSWorkspace.shared.activateFileViewerSelecting(urls)
-        return IPCResponse(id: req.id, success: true, message: nil)
-    }
-
-    private func showInfo(_ req: IPCRequest) -> IPCResponse {
-        guard let paths = req.payload["paths"]?.stringArrayValue else {
-            return IPCResponse(id: req.id, success: false, message: "showInfo 参数缺失")
-        }
-        for p in paths {
-            let script = """
-                tell application "Finder"
-                    activate
-                    open information window of (POSIX file "\(p)" as alias)
-                end tell
-                """
-            var err: NSDictionary?
-            NSAppleScript(source: script)?.executeAndReturnError(&err)
-            if let e = err {
-                let msg = e["NSAppleScriptErrorMessage"] as? String ?? "AppleScript failed"
-                return IPCResponse(id: req.id, success: false, message: msg)
+        case "batchRename":
+            guard let names = AppDialogs.rename(paths) else { return nil }
+            reveal(try files.rename(paths, names: names))
+        case "compressZip", "compressTarGz":
+            reveal([try ArchiveOperations.compress(paths, tarGz: req.action == "compressTarGz")])
+        case "decompress":
+            let archives = paths.isEmpty ? [URL(fileURLWithPath: try required("archive"))] : paths
+            var outputs: [URL] = []
+            var errors: [String] = []
+            for archive in archives {
+                do { outputs.append(try ArchiveOperations.extract(archive)) }
+                catch { errors.append("\(archive.lastPathComponent)：\(error.localizedDescription)") }
             }
-        }
-        return IPCResponse(id: req.id, success: true, message: nil)
-    }
-
-    private func compressZip(_ req: IPCRequest) -> IPCResponse {
-        guard let items = req.payload["items"]?.stringArrayValue, let first = items.first else {
-            return IPCResponse(id: req.id, success: false, message: "compressZip 参数缺失")
-        }
-        let dir = URL(fileURLWithPath: first).deletingLastPathComponent()
-        let name = items.count == 1
-            ? URL(fileURLWithPath: first).deletingPathExtension().lastPathComponent
-            : "Archive"
-        let dest = uniqueFileURL(baseName: name, ext: "zip", in: dir)
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
-        proc.currentDirectoryURL = dir
-        proc.arguments = ["-r", dest.path] + items.map { URL(fileURLWithPath: $0).lastPathComponent }
-        do {
-            try proc.run()
-            proc.waitUntilExit()
-            if FileManager.default.fileExists(atPath: dest.path) {
-                NSWorkspace.shared.activateFileViewerSelecting([dest])
-                return IPCResponse(id: req.id, success: true, message: dest.path)
+            reveal(outputs)
+            if !errors.isEmpty { throw FileOperationError(errors.joined(separator: "\n")) }
+        case "copyNames", "copyPath", "copyFileURLs", "copySHA256":
+            let text: String
+            switch req.action {
+            case "copyNames": text = paths.map(\.lastPathComponent).joined(separator: "\n")
+            case "copyFileURLs": text = paths.map(\.absoluteString).joined(separator: "\n")
+            case "copySHA256": text = try paths.map { try FileOperations.sha256(of: $0) + "  " + $0.lastPathComponent }.joined(separator: "\n")
+            default: text = paths.map(\.path).joined(separator: "\n")
             }
-            return IPCResponse(id: req.id, success: false, message: "zip exit=\(proc.terminationStatus)")
-        } catch {
-            return IPCResponse(id: req.id, success: false, message: error.localizedDescription)
-        }
-    }
-
-    private func compressTarGz(_ req: IPCRequest) -> IPCResponse {
-        guard let items = req.payload["items"]?.stringArrayValue, let first = items.first else {
-            return IPCResponse(id: req.id, success: false, message: "compressTarGz 参数缺失")
-        }
-        let dir = URL(fileURLWithPath: first).deletingLastPathComponent()
-        let name = items.count == 1
-            ? URL(fileURLWithPath: first).deletingPathExtension().lastPathComponent
-            : "Archive"
-        let dest = uniqueFileURL(baseName: name, ext: "tar.gz", in: dir)
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
-        proc.currentDirectoryURL = dir
-        proc.arguments = ["-czf", dest.path] + items.map { URL(fileURLWithPath: $0).lastPathComponent }
-        do {
-            try proc.run()
-            proc.waitUntilExit()
-            if FileManager.default.fileExists(atPath: dest.path) {
-                NSWorkspace.shared.activateFileViewerSelecting([dest])
-                return IPCResponse(id: req.id, success: true, message: dest.path)
+            AppDialogs.onMain {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(text, forType: .string)
             }
-            return IPCResponse(id: req.id, success: false, message: "tar exit=\(proc.terminationStatus)")
-        } catch {
-            return IPCResponse(id: req.id, success: false, message: error.localizedDescription)
-        }
-    }
-
-    private func decompress(_ req: IPCRequest) -> IPCResponse {
-        guard let archive = req.payload["archive"]?.stringValue else {
-            return IPCResponse(id: req.id, success: false, message: "decompress 参数缺失")
-        }
-        let url = URL(fileURLWithPath: archive)
-        let dir = url.deletingLastPathComponent()
-        let ext = url.pathExtension.lowercased()
-        let proc = Process()
-        proc.currentDirectoryURL = dir
-        switch ext {
-        case "zip":
-            proc.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-            proc.arguments = ["-o", archive, "-d", dir.path]
-        default:
-            proc.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
-            proc.arguments = ["-xf", archive, "-C", dir.path]
-        }
-        do {
-            try proc.run()
-            proc.waitUntilExit()
-            return IPCResponse(id: req.id,
-                               success: proc.terminationStatus == 0,
-                               message: "exit=\(proc.terminationStatus)")
-        } catch {
-            return IPCResponse(id: req.id, success: false, message: error.localizedDescription)
-        }
-    }
-
-    private func openTerminal(_ req: IPCRequest) -> IPCResponse {
-        guard let directory = req.payload["directory"]?.stringValue,
-              let bundleId = req.payload["bundleId"]?.stringValue else {
-            return IPCResponse(id: req.id, success: false, message: "openTerminal 参数缺失")
-        }
-        let url = URL(fileURLWithPath: directory)
-        let success = NSWorkspace.shared.open(
-            [url],
-            withAppBundleIdentifier: bundleId,
-            options: [],
-            additionalEventParamDescriptor: nil,
-            launchIdentifiers: nil
-        )
-        return IPCResponse(id: req.id, success: success,
-                           message: success ? nil : "NSWorkspace.open 返回 false")
-    }
-
-    private func openWithApp(_ req: IPCRequest) -> IPCResponse {
-        guard let paths = req.payload["paths"]?.stringArrayValue,
-              let bundleId = req.payload["bundleId"]?.stringValue else {
-            return IPCResponse(id: req.id, success: false, message: "openWithApp 参数缺失")
-        }
-        let cliPaths = req.payload["cliFallbackPaths"]?.stringArrayValue ?? []
-        let urls = paths.map { URL(fileURLWithPath: $0) }
-        let ok = NSWorkspace.shared.open(
-            urls,
-            withAppBundleIdentifier: bundleId,
-            options: [],
-            additionalEventParamDescriptor: nil,
-            launchIdentifiers: nil
-        )
-        if ok { return IPCResponse(id: req.id, success: true, message: nil) }
-
-        if let cmd = cliPaths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
-            let proc = Process()
-            proc.executableURL = URL(fileURLWithPath: cmd)
-            proc.arguments = paths
-            do {
-                try proc.run()
-                return IPCResponse(id: req.id, success: true, message: nil)
-            } catch {
-                return IPCResponse(id: req.id, success: false, message: error.localizedDescription)
+            if req.action == "copySHA256" { AppDialogs.message(title: "SHA-256 已复制", text: text) }
+        case "imageConvert", "imageResize", "imageCompress":
+            let format = ImageOperations.Format(rawValue: payload["format"]?.stringValue ?? "png") ?? .png
+            let maxPixel = payload["maxPixel"]?.intValue
+            var outputs: [URL] = []
+            var errors: [String] = []
+            for url in paths {
+                do {
+                    outputs.append(try ImageOperations.convert(url, format: req.action == "imageCompress" ? .jpeg : format,
+                        maxPixel: maxPixel, quality: req.action == "imageCompress" ? 0.7 : 0.9))
+                } catch { errors.append("\(url.lastPathComponent)：\(error.localizedDescription)") }
             }
-        }
-        return IPCResponse(id: req.id, success: false, message: "无法打开 \(bundleId)，且无 CLI fallback")
-    }
-
-    private func toggleHiddenFiles(_ req: IPCRequest) -> IPCResponse {
-        // 用 CGEventPostToPid 直接向 Finder 进程发送 Cmd+Shift+.
-        // 只需辅助功能权限，无需 Automation（Apple Events）权限，也不依赖前台焦点。
-        let opts = ["AXTrustedCheckOptionPrompt": false] as CFDictionary
-        guard AXIsProcessTrustedWithOptions(opts) else {
-            serviceLog("no Accessibility permission, fallback to defaults")
-            return toggleHiddenFilesViaDefaults(req)
-        }
-
-        guard let finder = NSRunningApplication.runningApplications(
-            withBundleIdentifier: "com.apple.finder").first else {
-            serviceLog("Finder not running, fallback to defaults")
-            return toggleHiddenFilesViaDefaults(req)
-        }
-
-        let pid = finder.processIdentifier
-        let src = CGEventSource(stateID: .hidSystemState)
-        // kVK_ANSI_Period = 0x2F
-        let down = CGEvent(keyboardEventSource: src, virtualKey: 0x2F, keyDown: true)
-        let up   = CGEvent(keyboardEventSource: src, virtualKey: 0x2F, keyDown: false)
-        down?.flags = [.maskCommand, .maskShift]
-        up?.flags   = [.maskCommand, .maskShift]
-        down?.postToPid(pid)
-        up?.postToPid(pid)
-
-        serviceLog("sent Cmd+Shift+. to Finder pid=\(pid)")
-        return IPCResponse(id: req.id, success: true, message: "toggled via CGEvent pid=\(pid)")
-    }
-
-    private func serviceLog(_ message: String) {
-        NSLog("[FinderRightService] \(message)")
-    }
-
-    private func toggleHiddenFilesViaDefaults(_ req: IPCRequest) -> IPCResponse {
-        do {
-            let readProc = Process()
-            readProc.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            readProc.arguments = ["read", "com.apple.finder", "AppleShowAllFiles"]
-            let pipe = Pipe()
-            readProc.standardOutput = pipe
-            readProc.standardError = Pipe()
-            try readProc.run()
-            readProc.waitUntilExit()
-            let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let newValue = (output.uppercased() == "YES" || output == "1") ? "NO" : "YES"
-
-            let writeProc = Process()
-            writeProc.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            writeProc.arguments = ["write", "com.apple.finder", "AppleShowAllFiles", newValue]
-            try writeProc.run()
-            writeProc.waitUntilExit()
-
-            let killProc = Process()
-            killProc.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-            killProc.arguments = ["Finder"]
-            try killProc.run()
-            killProc.waitUntilExit()
-
-            return IPCResponse(id: req.id, success: true, message: "set to \(newValue), restarted Finder")
-        } catch {
-            return IPCResponse(id: req.id, success: false, message: error.localizedDescription)
-        }
-    }
-
-    // MARK: - 剪切 / 粘贴（先移到暂存区，再粘贴到目标）
-
-    /// 剪切队列文件路径（存储暂存区内的文件路径）
-    private var cutQueueFileURL: URL {
-        IPCBridge.rootDirectory.appendingPathComponent("cut-queue.json")
-    }
-
-    /// 暂存目录：文件剪切后先放到这里，粘贴时再移走
-    private var stagingDirectory: URL {
-        IPCBridge.rootDirectory.appendingPathComponent("staging", isDirectory: true)
-    }
-
-    /// 剪切：立即将源文件移到暂存区，源文件从原位置消失。
-    /// 暂存路径写入 cut-queue.json，供后续粘贴使用。
-    private func cutFiles(_ req: IPCRequest) -> IPCResponse {
-        guard let paths = req.payload["paths"]?.stringArrayValue, !paths.isEmpty else {
-            return IPCResponse(id: req.id, success: false, message: "cutFiles 参数缺失：paths")
-        }
-
-        let fileManager = FileManager.default
-        let staging = stagingDirectory
-
-        // 每次剪切都清空旧的暂存区，避免残留文件干扰
-        try? fileManager.removeItem(at: staging)
-        do {
-            try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
-        } catch {
-            return IPCResponse(id: req.id, success: false, message: "无法创建暂存目录: \(error.localizedDescription)")
-        }
-
-        var stagedPaths: [String] = []
-        var firstError: String?
-
-        for sourcePath in paths {
-            let sourceURL = URL(fileURLWithPath: sourcePath)
-            var destURL = staging.appendingPathComponent(sourceURL.lastPathComponent)
-
-            // 避免暂存区内命名冲突
-            if fileManager.fileExists(atPath: destURL.path) {
-                let base = destURL.deletingPathExtension().lastPathComponent
-                let ext  = destURL.pathExtension
-                var counter = 1
-                repeat {
-                    let numbered = ext.isEmpty ? "\(base) \(counter)" : "\(base) \(counter).\(ext)"
-                    destURL = staging.appendingPathComponent(numbered)
-                    counter += 1
-                } while fileManager.fileExists(atPath: destURL.path)
+            reveal(outputs)
+            if !errors.isEmpty { throw FileOperationError(errors.joined(separator: "\n")) }
+        case "makePDF": reveal([try ImageOperations.makePDF(paths)])
+        case "openTerminal", "openWithApp":
+            let bundleId = try required("bundleId")
+            guard let applicationURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else {
+                throw FileOperationError("找不到应用，请在设置中重新选择。")
             }
-
-            do {
-                try fileManager.moveItem(at: sourceURL, to: destURL)
-                stagedPaths.append(destURL.path)
-            } catch {
-                if firstError == nil { firstError = error.localizedDescription }
+            let urls = req.action == "openTerminal" ? [URL(fileURLWithPath: try required("directory"))] : paths
+            DispatchQueue.main.async {
+                let configuration = NSWorkspace.OpenConfiguration()
+                NSWorkspace.shared.open(urls, withApplicationAt: applicationURL, configuration: configuration) { _, error in
+                    if let error { AppDialogs.message(title: "无法打开应用", text: error.localizedDescription) }
+                }
             }
+        case "openFolder":
+            let url = URL(fileURLWithPath: try required("directory"))
+            DispatchQueue.main.async { NSWorkspace.shared.open(url) }
+        case "toggleHiddenFiles":
+            guard AXIsProcessTrusted(), let finder = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first else {
+                throw FileOperationError("请在系统设置中授予 FinderRight 辅助功能权限，或在 Finder 中按 ⌘⇧. 切换隐藏文件。")
+            }
+            let source = CGEventSource(stateID: .hidSystemState)
+            for down in [true, false] {
+                let event = CGEvent(keyboardEventSource: source, virtualKey: 0x2F, keyDown: down)
+                event?.flags = [.maskCommand, .maskShift]
+                event?.postToPid(finder.processIdentifier)
+            }
+        default: throw FileOperationError("不支持的操作：\(req.action)")
         }
-
-        // 将暂存路径写入队列文件，供粘贴时读取
-        if let data = try? JSONSerialization.data(withJSONObject: stagedPaths) {
-            try? data.write(to: cutQueueFileURL, options: .atomic)
-        }
-
-        if let err = firstError {
-            return IPCResponse(id: req.id, success: false, message: err)
-        }
-        return IPCResponse(id: req.id, success: true, message: "已暂存 \(stagedPaths.count) 个文件")
+        return nil
     }
+}
 
-    private func pasteFiles(_ req: IPCRequest) -> IPCResponse {
-        guard let destPath = req.payload["destination"]?.stringValue else {
-            return IPCResponse(id: req.id, success: false, message: "pasteFiles 参数缺失：destination")
+/// Finder and Services use the same queue so concurrent requests cannot race.
+enum ActionRunner {
+    static let queue = DispatchQueue(label: "com.finderright.operations", qos: .userInitiated)
+    static func submit(_ request: IPCRequest) {
+        queue.async {
+            let titles = ["compressZip": "正在压缩", "compressTarGz": "正在压缩", "decompress": "正在解压",
+                          "imageConvert": "正在转换图片", "imageResize": "正在缩放图片", "imageCompress": "正在压缩图片",
+                          "makePDF": "正在生成 PDF", "copySHA256": "正在计算 SHA-256"]
+            let progress = DispatchWorkItem { AppDialogs.showProgress(titles[request.action] ?? "正在处理") }
+            if titles[request.action] != nil { DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: progress) }
+            let result = FinderRightService().handle(request)
+            progress.cancel()
+            DispatchQueue.main.async { AppDialogs.hideProgress() }
+            if !result.success { AppDialogs.message(title: "操作未完成", text: result.message ?? "请重试。") }
         }
-        let destDir = URL(fileURLWithPath: destPath)
-
-        // 从 IPC 共享文件读取剪切队列
-        guard let data = try? Data(contentsOf: cutQueueFileURL),
-              let sourcePaths = try? JSONSerialization.jsonObject(with: data) as? [String],
-              !sourcePaths.isEmpty else {
-            return IPCResponse(id: req.id, success: false, message: "剪切队列为空，请先剪切文件")
-        }
-
-        let fileManager = FileManager.default
-        var firstError: String?
-        var pastedPaths: [URL] = []
-        var failedPaths: [String] = []
-
-        for sourcePath in sourcePaths {
-            let sourceURL = URL(fileURLWithPath: sourcePath)
-            var destURL = destDir.appendingPathComponent(sourceURL.lastPathComponent)
-
-            // 目标已存在则自动重命名避免冲突
-            if fileManager.fileExists(atPath: destURL.path) {
-                let base = destURL.deletingPathExtension().lastPathComponent
-                let ext  = destURL.pathExtension
-                var counter = 1
-                repeat {
-                    let numbered = ext.isEmpty ? "\(base) \(counter)" : "\(base) \(counter).\(ext)"
-                    destURL = destDir.appendingPathComponent(numbered)
-                    counter += 1
-                } while fileManager.fileExists(atPath: destURL.path)
-            }
-
-            do {
-                try fileManager.moveItem(at: sourceURL, to: destURL)
-                pastedPaths.append(destURL)
-            } catch {
-                if firstError == nil { firstError = error.localizedDescription }
-                failedPaths.append(sourcePath)
-            }
-        }
-
-        // 更新剪切队列：只保留未能移动成功的路径，防止队列指向已不存在的源文件
-        if failedPaths.isEmpty {
-            try? fileManager.removeItem(at: cutQueueFileURL)
-        } else if let updatedData = try? JSONSerialization.data(withJSONObject: failedPaths) {
-            try? updatedData.write(to: cutQueueFileURL, options: .atomic)
-        }
-
-        if let err = firstError {
-            return IPCResponse(id: req.id, success: false, message: err)
-        }
-
-        if !pastedPaths.isEmpty {
-            NSWorkspace.shared.activateFileViewerSelecting(pastedPaths)
-        }
-
-        return IPCResponse(id: req.id, success: true, message: "已移动 \(pastedPaths.count) 个文件")
-    }
-
-    // MARK: - Helpers
-
-    private func uniqueFileURL(baseName: String, ext: String, in directory: URL) -> URL {
-        let name = ext.isEmpty ? baseName : "\(baseName).\(ext)"
-        var url = directory.appendingPathComponent(name)
-        var counter = 1
-        while FileManager.default.fileExists(atPath: url.path) {
-            let numbered = ext.isEmpty ? "\(baseName) \(counter)" : "\(baseName) \(counter).\(ext)"
-            url = directory.appendingPathComponent(numbered)
-            counter += 1
-        }
-        return url
     }
 }

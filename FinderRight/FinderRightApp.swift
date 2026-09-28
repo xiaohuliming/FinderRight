@@ -47,6 +47,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSLog("[AppDelegate] activation policy = \(alwaysShowDockIcon ? "regular" : "accessory")")
 
         setupStatusItem()
+        if !UserDefaults.standard.bool(forKey: "assistantWelcomeShown") {
+            UserDefaults.standard.set(true, forKey: "assistantWelcomeShown")
+            openSettings()
+        }
 
         // 注册 macOS Services：让右键操作在 iCloud / Google Drive 等 File Provider
         // 云盘文件夹中也可用（FinderSync 扩展在这些目录被系统架构性禁止）。
@@ -61,6 +65,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(defaultsChanged),
             name: UserDefaults.didChangeNotification, object: nil)
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        openSettings()
+        return true
     }
 
     // MARK: - 原生状态栏菜单

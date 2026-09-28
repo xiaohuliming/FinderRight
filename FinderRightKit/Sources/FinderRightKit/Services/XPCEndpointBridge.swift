@@ -16,7 +16,8 @@ public enum IPCBridge {
 
     /// 共享根目录（在真实用户 home，绕过沙箱重定向）
     public static var rootDirectory: URL {
-        let home = URL(fileURLWithPath: "/Users/\(NSUserName())")
+        let path = getpwuid(getuid()).map { String(cString: $0.pointee.pw_dir) } ?? NSHomeDirectory()
+        let home = URL(fileURLWithPath: path)
         return home
             .appendingPathComponent("Library", isDirectory: true)
             .appendingPathComponent("Application Support", isDirectory: true)

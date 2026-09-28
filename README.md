@@ -1,130 +1,80 @@
-<div align="center">
-
 # FinderRight
 
-**增强 macOS Finder 右键菜单的轻量工具 · A lightweight tool that supercharges the macOS Finder right-click menu**
+Finder 右键增强工具。基于 [funny-dog/FinderRight](https://github.com/funny-dog/FinderRight) 开发，保留 MIT 许可证及原作者署名。
 
-[English](#english) · [中文](#中文)
+本 fork 的 1.2.0 是预览版本，新增功能界面目前以中文为主。支持 macOS 13 及以上，构建产物同时包含 Apple Silicon 与 Intel 架构。文件、图片和配置均在本机处理。
 
-![platform](https://img.shields.io/badge/platform-macOS%2013%2B-blue)
-![license](https://img.shields.io/badge/license-MIT-green)
+## 功能
 
-</div>
+| 分类 | 已实现能力 |
+| --- | --- |
+| 新建 | 14 种内置文本类型、自定义文本模板、新建文件夹、创建时修改名称 |
+| 复制信息 | 完整路径、文件名、file URL、SHA-256 校验值 |
+| 文件整理 | 安全剪切粘贴、取消剪切、复制或移动到指定目录、创建副本 |
+| 批量重命名 | 前后缀、查找替换、编号命名，执行前显示新旧名称预览 |
+| 压缩解压 | 创建 ZIP 与 TAR.GZ，解压到独立文件夹，检查不安全路径 |
+| 开发工具 | 在目录打开终端，选择已安装编辑器，支持 Ghostty |
+| 常用目录 | 收藏、打开目录，以及作为复制或移动的目标 |
+| 图片 | PNG、JPEG、HEIC、TIFF 转换，按最长边缩放，JPEG 压缩副本 |
+| PDF | 按文件名自然排序合并图片与 PDF，保留全部 PDF 页面 |
+| 个性化 | 菜单分组或平铺、逐项开关、菜单快捷键、菜单栏与 Dock 显示 |
+| 系统集成 | 登录启动、Finder 扩展、云盘目录的 macOS Services 入口 |
 
----
+## 文件安全变化
 
-## 中文
+旧版连续剪切会删除上一批暂存文件。本 fork 的剪切只记录源路径，粘贴时才移动文件。重复剪切和取消剪切不会删除原文件。移动失败的项保留在队列中，可再次粘贴。同名目标自动编号，不覆盖已有文件。
 
-FinderRight 是一个纯本地、无后台服务、开源免费的 macOS 工具，为 Finder 右键菜单添加开发者常用的快捷操作。
+旧版 `staging` 中尚未粘贴的内容保留。“剪切与恢复”页提供粘贴及打开暂存目录的入口。旧队列恢复完成前，应用会阻止新剪切覆盖该队列。
 
-### ✨ 功能
+解压总是创建独立输出文件夹。压缩包中的绝对路径、父目录穿越路径会被拒绝，底层 bsdtar 默认的符号链接保护保持开启。失败的部分解压结果保留在新输出文件夹，错误提示会给出位置。
 
-- 📄 **新建文件** —— 一键新建 txt / Markdown / Python / Shell / JSON / Swift / JS 等十种文件
-- 📋 **复制路径** —— 复制选中文件/文件夹的完整路径
-- 💻 **打开终端** —— 在当前目录打开终端（支持 Terminal / iTerm2 / Warp）
-- ✏️ **打开编辑器** —— 用 VS Code / Cursor / Sublime / Xcode 等打开
-- ✂️ **剪切 / 粘贴** —— Finder 原生没有的"剪切文件"
-- 📦 **压缩 / 解压** —— 压缩为 ZIP；选中压缩包可解压到当前目录
-- 👁 **切换隐藏文件** —— 即时显示/隐藏隐藏文件，**不重启 Finder、窗口不闪烁**（需辅助功能权限）
-- ⌨️ **自定义快捷键** —— 给每个菜单项绑定快捷键
-- 🌗 **中英文双语** —— 跟随系统语言自动切换
+## 使用边界
 
-### 📥 安装
+- 云盘目录可能不显示第三方 FinderSync 菜单，可以选中文件后使用右键“服务”。无选中项的新建操作无法通过 Services 提供。
+- 系统“服务”菜单由 macOS 管理，应用内功能开关只控制 Finder 扩展菜单。可在系统设置的键盘快捷键中管理 Services。
+- 快捷键属于菜单项快捷键，不是全局热键。
+- 图片处理生成副本，不覆盖原图。动画和多页图片会被拒绝，避免悄悄丢帧。JPEG 不支持透明度，透明部分填充白色。图像输出不承诺保留 EXIF 等元数据。
+- HEIC 编码及 RAR、7z 等解码能力取决于当前系统提供的编解码器。加密压缩包暂不支持。JPEG 压缩降低编码质量，但不保证所有输入都得到更小的文件。
+- 批量重命名保留扩展名。名称冲突会拒绝执行，不支持相互交换文件名。
+- 当前采用 ad-hoc 本地签名，尚未 Apple 公证。源码和本地签名验证通过不等于通过 Gatekeeper 分发验证。
+- 文件 IPC 仍沿用上游的本地架构，已加入 UUID、请求大小和符号链接检查，但没有基于代码签名的调用方认证。不要将主应用视为对同一用户下恶意进程的安全隔离边界。
 
-1. 下载 **[FinderRight.dmg](https://github.com/funny-dog/FinderRight/releases/latest/download/FinderRight.dmg)** —— 此链接始终指向最新 Release
-2. 打开 DMG，把 `FinderRight.app` 拖到 `Applications`
-3. **首次打开**（应用未经 Apple 公证，需手动放行）：
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/FinderRight.app
-   ```
-   然后双击打开；或右键 → 打开 → 在弹窗中选择"打开"。
-4. 启动后按引导：
-   - **启用 Finder 扩展**：系统设置 → 隐私与安全性 → 扩展 → 访达扩展 → 勾选 FinderRight
-   - **授予完全磁盘访问**（在受保护目录使用所有功能）
-   - **授予辅助功能**（让"切换隐藏文件"不闪烁）
+## 安装与启用
 
-> ⚠️ 当前为 adhoc 签名版本。若未来提供 Developer ID 公证版，可省去第 3 步。
+1. 解压构建产物，将 `FinderRight.app` 放入“应用程序”。
+2. 打开应用，根据 macOS 对未公证应用的提示处理首次启动。
+3. 在“通用”页选择“管理 Finder 扩展”，在系统界面启用 FinderRightSync。
+4. 在本地目录中测试右键菜单。在云盘目录中测试右键“服务”。
+5. 文件访问按系统提示按需授权。只有菜单中的“切换隐藏文件”需要辅助功能权限，未授权时可手动按 `⌘⇧.`。应用不会为此重启 Finder。
 
-### 🛠 从源码构建
+应用无法通过公开 API 准确读取完全磁盘访问状态，因此不把目录可读误报为已授权。登录启动使用系统 ServiceManagement 注册；需要系统批准时会打开对应设置。
 
-需要 Xcode 16+ 和 [xcodegen](https://github.com/yonaskolb/XcodeGen)：
+## 从源码构建
 
-```bash
-brew install xcodegen
-xcodegen generate
-xcodebuild -scheme FinderRight -configuration Release \
-  -derivedDataPath build/release build
-```
-
-### 🏗 架构
-
-- **主 App**（未沙箱）：菜单栏 + 设置界面，借用 TCC 权限执行实际文件操作
-- **Finder 扩展**（沙箱）：负责右键菜单
-- **IPC**：扩展通过"文件 + URL scheme"唤醒主 App 执行操作，无需 App Group / 付费开发者账号
-
-### ☁️ iCloud / Google Drive 等云盘
-
-iCloud Drive、Google Drive、OneDrive、Dropbox 等云盘在 macOS 上是 **File Provider 域**，系统只允许其自身扩展提供右键菜单，第三方 Finder 扩展无法在其中显示菜单（**与完全磁盘访问无关**）。因此在这些云盘文件夹里，FinderRight 的操作改为出现在 **右键 →「服务」子菜单**（选中文件后可用：复制路径 / 打开终端 / 打开编辑器 / 剪切 / 压缩 / 解压）。「新建文件」和空白处「粘贴」因没有选中项，无法走此路径。
-
-### 📄 许可证
-
-[MIT](LICENSE)
-
----
-
-## English
-
-FinderRight is a fully local, server-free, open-source macOS tool that adds developer-friendly actions to the Finder right-click menu.
-
-### ✨ Features
-
-- 📄 **New File** — create txt / Markdown / Python / Shell / JSON / Swift / JS and more with one click
-- 📋 **Copy Path** — copy the full path of selected files/folders
-- 💻 **Open in Terminal** — open the current folder in Terminal / iTerm2 / Warp
-- ✏️ **Open in Editor** — open with VS Code / Cursor / Sublime / Xcode, etc.
-- ✂️ **Cut / Paste** — the "cut file" that Finder lacks natively
-- 📦 **Compress / Extract** — compress to ZIP; extract archives in place
-- 👁 **Toggle Hidden Files** — instantly show/hide hidden files **without restarting Finder or flickering** (needs Accessibility)
-- ⌨️ **Custom Shortcuts** — bind a keyboard shortcut to any menu item
-- 🌗 **Bilingual** — follows your system language (English / 简体中文)
-
-### 📥 Installation
-
-1. Download **[FinderRight.dmg](https://github.com/funny-dog/FinderRight/releases/latest/download/FinderRight.dmg)** — this link always points to the latest release
-2. Open the DMG and drag `FinderRight.app` into `Applications`
-3. **First launch** (the app is not notarized by Apple, so Gatekeeper must be bypassed):
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/FinderRight.app
-   ```
-   Then double-click to open, or right-click → Open → choose "Open" in the dialog.
-4. Follow the onboarding:
-   - **Enable the Finder extension**: System Settings → Privacy & Security → Extensions → Finder Extensions → check FinderRight
-   - **Grant Full Disk Access** (to use all features in protected folders)
-   - **Grant Accessibility** (so "Toggle Hidden Files" doesn't flicker)
-
-> ⚠️ This is an ad-hoc signed build. A Developer ID notarized build would remove step 3.
-
-### 🛠 Build from Source
-
-Requires Xcode 16+ and [xcodegen](https://github.com/yonaskolb/XcodeGen):
+需要完整 Xcode。已提交 Xcode 工程，日常构建不依赖 XcodeGen；修改 `project.yml` 后再运行 `xcodegen generate`。
 
 ```bash
-brew install xcodegen
-xcodegen generate
-xcodebuild -scheme FinderRight -configuration Release \
-  -derivedDataPath build/release build
+swift test --package-path FinderRightKit
+./scripts/build.sh
 ```
 
-### 🏗 Architecture
+默认在 `dist/` 生成通用架构 ZIP 与 SHA-256 文件。也可以指定输出目录：
 
-- **Main app** (non-sandboxed): menu bar + settings UI, runs the actual file operations using its TCC permissions
-- **Finder extension** (sandboxed): provides the right-click menu
-- **IPC**: the extension wakes the main app via a file + URL scheme to perform actions — no App Group or paid developer account required
+```bash
+./scripts/build.sh /absolute/path/to/output
+```
 
-### ☁️ iCloud / Google Drive and other cloud folders
+脚本在系统临时目录中编译和签名，避免 iCloud 等 File Provider 给构建目录附加元数据而导致 codesign 失败。
 
-iCloud Drive, Google Drive, OneDrive, Dropbox and similar cloud storage are **File Provider domains** on macOS; the system only lets their own extension provide the right-click menu, so third-party Finder extensions can't show a menu there (**unrelated to Full Disk Access**). Inside these cloud folders, FinderRight's actions appear under **right-click → Services** instead (available with a file selected: Copy Path / Open in Terminal / Open in Editor / Cut / Compress / Extract). "New File" and pasting into empty space can't use this path since they have no selection.
+## 实现结构
 
-### 📄 License
+- `FinderRightSync`：按文件类型构建右键菜单，异步提交操作。
+- `FinderRight`：设置界面、选择器、重命名预览和串行任务执行。
+- `FinderRightKit`：可独立测试的文件、压缩包、图片、PDF 操作及共享配置。
+- `FinderRightKit/Tests`：文件保全、冲突、旧队列迁移、路径逃逸、图片和 PDF 回归测试。
 
-[MIT](LICENSE)
+[验证记录](docs/VALIDATION.md)区分自动化测试、真实界面验证和待验收项目。
+
+## 许可证
+
+[MIT](LICENSE)。感谢上游作者 funny-dog。
