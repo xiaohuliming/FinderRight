@@ -12,12 +12,13 @@ struct FinderRightApp: App {
     }
 
     var body: some Scene {
-        // 设置窗口保留 SwiftUI Settings scene（提供 ⌘, 与标准设置窗口）。
-        // 菜单栏入口与引导窗口改由 AppDelegate 用原生 AppKit 管理，
-        // 以兼容 Ice/Thaw/Bartender 等菜单栏管理器（SwiftUI MenuBarExtra 与它们不兼容）。
-        Settings {
-            SettingsView()
-        }
+        Settings { EmptyView() }
+            .commands {
+                CommandGroup(replacing: .appSettings) {
+                    Button("设置…") { appDelegate.openSettings() }
+                        .keyboardShortcut(",")
+                }
+            }
     }
 }
 
@@ -96,7 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(status)
         menu.addItem(.separator())
 
-        let settings = NSMenuItem(title: L("设置..."), action: #selector(openSettings), keyEquivalent: ",")
+        let settings = NSMenuItem(title: L("设置…"), action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
 
@@ -115,7 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func L(_ key: String) -> String { NSLocalizedString(key, comment: "menu") }
 
-    @objc private func openSettings() {
+    @objc func openSettings() {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         // accessory→regular 切换需延一拍，否则窗口创建早于策略生效会不显示
@@ -123,11 +124,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             if self.settingsWindow == nil {
                 let hosting = NSHostingController(rootView: SettingsView())
+                hosting.sizingOptions = [.minSize]
                 let win = NSWindow(contentViewController: hosting)
                 win.title = "FinderRight"
-                win.styleMask = [.titled, .closable, .miniaturizable]
+                win.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+                win.titlebarAppearsTransparent = true
+                win.titleVisibility = .hidden
+                win.isMovableByWindowBackground = true
+                win.contentMinSize = Theme.Size.windowMin
+                win.contentMaxSize = Theme.Size.windowMax
                 win.isReleasedWhenClosed = false
+                win.setContentSize(Theme.Size.windowDefault)
                 win.center()
+                win.setFrameAutosaveName("FinderRight.Settings")
                 self.settingsWindow = win
             }
             self.settingsWindow?.makeKeyAndOrderFront(nil)

@@ -25,51 +25,66 @@ struct TerminalApp: Identifiable, Hashable {
 // MARK: - SettingsView
 
 struct SettingsView: View {
-    private enum Tab: String, CaseIterable, Identifiable {
-        case general = "通用", features = "右键菜单", templates = "文件模板", favorites = "常用目录", tools = "终端与编辑器", shortcuts = "快捷键", recovery = "剪切与恢复", about = "关于"
-        var id: String { rawValue }
-        var icon: String {
-            switch self {
-            case .general: return "gearshape"
-            case .features: return "cursorarrow.click.2"
-            case .templates: return "doc.badge.plus"
-            case .favorites: return "star"
-            case .tools: return "terminal"
-            case .shortcuts: return "keyboard"
-            case .recovery: return "arrow.uturn.backward"
-            case .about: return "info.circle"
-            }
-        }
-    }
-    @State private var selection: Tab = .general
+    @AppStorage("settingsSelectedPane") private var selectedPaneID = SettingsPane.general.rawValue
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private var pane: SettingsPane { SettingsPane(rawValue: selectedPaneID) ?? .general }
+    private let sections: [[SettingsPane]] = [[.general], [.menu, .templates, .favorites, .tools, .shortcuts], [.recovery], [.about]]
+
     var body: some View {
         HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 20) {
-                Label("FinderRight", systemImage: "cursorarrow.click.2")
-                    .font(.headline).padding(.horizontal, 14).padding(.top, 22)
-                List(Tab.allCases, selection: $selection) { tab in
-                    Label(tab.rawValue, systemImage: tab.icon).tag(tab).padding(.vertical, 5)
-                }.listStyle(.sidebar)
-                Text("Finder 右键增强").font(.caption).foregroundStyle(.secondary).padding(14)
-            }.frame(width: 185).background(Color(NSColor.windowBackgroundColor))
-            Divider()
-            VStack(alignment: .leading, spacing: 0) {
-                Text(selection.rawValue).font(.title2.weight(.semibold)).padding(24)
-                Divider()
-                Group {
-                    switch selection {
-                    case .general: GeneralTab()
-                    case .features: FeaturesTab()
-                    case .templates: TemplatesTab()
-                    case .favorites: FavoritesTab()
-                    case .tools: ToolsTab()
-                    case .shortcuts: ShortcutsTab()
-                    case .recovery: RecoveryTab()
-                    case .about: AboutTab()
+            VStack(spacing: 0) {
+                Color.clear.frame(height: Theme.Size.headerHeight)
+                List(selection: Binding<SettingsPane?>(
+                    get: { pane },
+                    set: { if let value = $0 { selectedPaneID = value.rawValue } }
+                )) {
+                    ForEach(sections.indices, id: \.self) { index in
+                        Section {
+                            ForEach(sections[index]) { item in
+                                HStack(spacing: Theme.Spacing.s) {
+                                    IconTile(symbol: item.symbol, tint: item.tint, size: Theme.Size.sidebarIcon, style: .solid)
+                                    Text(item.title)
+                                }
+                                .frame(minHeight: 28).tag(item)
+                                .accessibilityElement(children: .combine)
+                            }
+                        }
                     }
-                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .listStyle(.sidebar).scrollContentBackground(.hidden)
             }
-        }.frame(width: 800, height: 600)
+            .frame(width: Theme.Size.sidebarWidth)
+            .background(VisualEffectBackground(material: .sidebar, blendingMode: .behindWindow).ignoresSafeArea())
+            Divider()
+            VStack(spacing: 0) {
+                HStack {
+                    Text(pane.title).font(.headline).accessibilityAddTraits(.isHeader)
+                    Spacer()
+                }
+                .padding(.leading, Theme.Spacing.xl).frame(height: Theme.Size.headerHeight)
+                Divider()
+                paneContent.id(pane).transition(.opacity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(minWidth: Theme.Size.windowMin.width, idealWidth: Theme.Size.windowDefault.width,
+               maxWidth: .infinity, minHeight: Theme.Size.windowMin.height,
+               idealHeight: Theme.Size.windowDefault.height, maxHeight: .infinity)
+        .ignoresSafeArea(.container, edges: .top)
+        .animation(reduceMotion ? nil : Theme.Motion.quick, value: pane)
+    }
+
+    @ViewBuilder private var paneContent: some View {
+        switch pane {
+        case .general: GeneralTab()
+        case .menu: FeaturesTab()
+        case .templates: TemplatesTab()
+        case .favorites: FavoritesTab()
+        case .tools: ToolsTab()
+        case .shortcuts: ShortcutsTab()
+        case .recovery: RecoveryTab()
+        case .about: AboutTab()
+        }
     }
 }
 
